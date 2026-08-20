@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Financeiro" title="Repasses" subtitle="Controle solicitações e pagamentos de repasses para franquias e motoristas." actions={['Aprovar selecionados','Exportar']} items={[{n:20,title:'Repasses',description:'Solicitações, aprovações, processamento e confirmação de pagamento, com destino Pix ou bancário e histórico completo.'}]}/>}
