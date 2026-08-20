@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Financeiro" title="Antecipações" subtitle="Analise pedidos de antecipação de saldo e aplique taxas configuráveis." actions={['Aprovar','Rejeitar']} items={[{n:21,title:'Antecipações',description:'Pedidos de antecipação para franquias ou motoristas, com valor solicitado, taxa, aprovação, pagamento e observações.'}]}/>}
