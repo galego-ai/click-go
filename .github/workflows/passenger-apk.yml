@@ -34,28 +34,45 @@ jobs:
           java-version: '17'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      - name: Install dependencies
+      - id: install
+        name: Install dependencies
+        continue-on-error: true
         run: npm install
-      - name: Expo prebuild
+      - id: prebuild
+        name: Expo prebuild
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
         run: npx expo prebuild --platform android --non-interactive
-      - name: Build debug APK
+      - id: gradle
+        name: Build debug APK
+        if: steps.prebuild.outcome == 'success'
+        continue-on-error: true
         working-directory: apps/passenger/android
         run: ./gradlew assembleDebug
-      - name: Collect APK
+      - id: collect
+        name: Collect APK
+        if: steps.gradle.outcome == 'success'
+        continue-on-error: true
         run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-passageiro-teste.apk
       - name: Upload APK artifact
+        if: steps.collect.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: click-go-passageiro-teste
           path: apps/passenger/click-go-passageiro-teste.apk
           if-no-files-found: error
-      - name: Commit APK to branch
+      - name: Persist build result
+        if: always()
         working-directory: .
         run: |
           mkdir -p artifacts
-          cp apps/passenger/click-go-passageiro-teste.apk artifacts/click-go-passageiro-teste.apk
+          printf 'install=%s\nprebuild=%s\ngradle=%s\ncollect=%s\n' '${{ steps.install.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.collect.outcome }}' > artifacts/passenger-apk-status.txt
+          if [ -f apps/passenger/click-go-passageiro-teste.apk ]; then
+            cp apps/passenger/click-go-passageiro-teste.apk artifacts/click-go-passageiro-teste.apk
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add artifacts/click-go-passageiro-teste.apk
-          git commit -m "build: add passenger test APK" || exit 0
+          git add artifacts/passenger-apk-status.txt
+          if [ -f artifacts/click-go-passageiro-teste.apk ]; then git add artifacts/click-go-passageiro-teste.apk; fi
+          git commit -m "build: persist passenger APK result" || exit 0
           git push origin HEAD:feature/passenger-app
