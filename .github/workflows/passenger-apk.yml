@@ -9,6 +9,9 @@ on:
       - '.github/workflows/passenger-apk.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -17,6 +20,8 @@ jobs:
         working-directory: apps/passenger
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/passenger-app
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -32,18 +37,25 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Expo prebuild
-        env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: npx expo prebuild --platform android --non-interactive
       - name: Build debug APK
         working-directory: apps/passenger/android
         run: ./gradlew assembleDebug
       - name: Collect APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-passageiro-teste.apk
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: click-go-passageiro-teste
           path: apps/passenger/click-go-passageiro-teste.apk
           if-no-files-found: error
+      - name: Commit APK to branch
+        working-directory: .
+        run: |
+          mkdir -p artifacts
+          cp apps/passenger/click-go-passageiro-teste.apk artifacts/click-go-passageiro-teste.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/click-go-passageiro-teste.apk
+          git commit -m "build: add passenger test APK" || exit 0
+          git push origin HEAD:feature/passenger-app
