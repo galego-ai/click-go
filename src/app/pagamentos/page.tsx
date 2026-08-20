@@ -1,2 +1,2 @@
-import ModulePage from '@/components/ModulePage'
-export default function Page(){return <ModulePage eyebrow="Financeiro" title="Pagamentos pendentes" subtitle="Acompanhe cobranças Pix, cartão, dinheiro e carteira, com status e referência do provedor." actions={['Atualizar status','Exportar']} items={[{n:19,title:'Pagamentos pendentes',description:'Fila de pagamentos pendentes, autorizados, pagos, falhos, estornados ou cancelados, vinculados à corrida e franquia.'}]}/>}
+import FinanceQueue from '@/components/FinanceQueue'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Financeiro</div><h1 className="title">Pagamentos</h1><p className="subtitle">Acompanhe e atualize pagamentos Pix, cartão, dinheiro e carteira por status.</p></div></div><FinanceQueue kind="payments"/></>}
