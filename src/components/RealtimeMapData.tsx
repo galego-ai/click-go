@@ -1,0 +1,11 @@
+'use client'
+import { useEffect,useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
+type Loc={driver_id:string;lat:number;lng:number;heading:number|null;speed_kmh:number|null;updated_at:string}
+export default function RealtimeMapData(){
+ const [rows,setRows]=useState<Loc[]>([]);const [msg,setMsg]=useState('Conectando ao Realtime...')
+ async function load(){const {data,error}=await supabase.from('driver_locations').select('driver_id,lat,lng,heading,speed_kmh,updated_at').order('updated_at',{ascending:false});if(error)setMsg(error.message);else{setRows((data||[]) as Loc[]);setMsg('')}}
+ useEffect(()=>{load();const ch=supabase.channel('driver-locations-admin').on('postgres_changes',{event:'*',schema:'public',table:'driver_locations'},()=>load()).subscribe();return()=>{supabase.removeChannel(ch)}},[])
+ return <><div className="grid-3"><div className="card"><div className="label">Posições recebidas</div><div className="metric kpi-good">{rows.length}</div></div><div className="card"><div className="label">Última atualização</div><div className="metric" style={{fontSize:18}}>{rows[0]?new Date(rows[0].updated_at).toLocaleTimeString('pt-BR'):'—'}</div></div><div className="card"><div className="label">Realtime</div><div className="metric" style={{fontSize:18}}>{msg||'Ativo'}</div></div></div><div className="section"><div className="map-placeholder"><div><strong>Mapa CLICK-GO em tempo real</strong><p>{rows.length?`${rows.length} posição(ões) disponíveis para renderização no mapa.`:'Aguardando motoristas enviarem localização.'}</p><p>Camada de mapa: Google Maps ou Mapbox será conectada pela chave do provedor.</p></div></div></div><div className="section"><div className="table-wrap"><table className="table"><thead><tr><th>Motorista</th><th>Latitude</th><th>Longitude</th><th>Velocidade</th><th>Atualizado</th></tr></thead><tbody>{rows.length===0?<tr><td colSpan={5} className="empty">Nenhuma localização recebida.</td></tr>:rows.map(r=><tr key={r.driver_id}><td>{r.driver_id.slice(0,8)}…</td><td>{r.lat.toFixed(6)}</td><td>{r.lng.toFixed(6)}</td><td>{r.speed_kmh??0} km/h</td><td>{new Date(r.updated_at).toLocaleString('pt-BR')}</td></tr>)}</tbody></table></div></div></>
+}
