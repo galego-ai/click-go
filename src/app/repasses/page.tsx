@@ -1,2 +1,2 @@
-import ModulePage from '@/components/ModulePage'
-export default function Page(){return <ModulePage eyebrow="Financeiro" title="Repasses" subtitle="Controle solicitações e pagamentos de repasses para franquias e motoristas." actions={['Aprovar selecionados','Exportar']} items={[{n:20,title:'Repasses',description:'Solicitações, aprovações, processamento e confirmação de pagamento, com destino Pix ou bancário e histórico completo.'}]}/>}
+import FinanceQueue from '@/components/FinanceQueue'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Financeiro</div><h1 className="title">Repasses</h1><p className="subtitle">Aprove, processe e marque como pagos os repasses de franquias e motoristas.</p></div></div><FinanceQueue kind="payouts"/></>}
