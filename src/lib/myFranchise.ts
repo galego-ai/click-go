@@ -1,0 +1,2 @@
+import { supabase } from './supabase'
+export async function getMyFranchise(){const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Sessão expirada');const {data,error}=await supabase.from('profiles').select('franchise_id,full_name,role').eq('id',user.id).single();if(error||!data?.franchise_id||data.role!=='franchise_admin')throw new Error('Franquia não identificada');return {userId:user.id,franchiseId:data.franchise_id,fullName:data.full_name||'Administrador'}}
