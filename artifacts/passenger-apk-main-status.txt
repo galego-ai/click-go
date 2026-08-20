@@ -1,0 +1,6 @@
+run_id=32429522639
+install=success
+typecheck=failure
+prebuild=skipped
+gradle=skipped
+collect=skipped
