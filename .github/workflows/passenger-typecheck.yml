@@ -9,18 +9,43 @@ on:
       - '.github/workflows/passenger-typecheck.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/passenger
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/passenger-app
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: apps/passenger/package.json
-      - run: npm install
-      - run: npm run typecheck
+      - name: Install dependencies
+        working-directory: apps/passenger
+        run: npm install
+      - name: Run typecheck and capture result
+        id: check
+        working-directory: apps/passenger
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck > passenger-typecheck.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat passenger-typecheck.log
+          exit 0
+      - name: Publish diagnostic log
+        working-directory: .
+        run: |
+          mkdir -p artifacts
+          cp apps/passenger/passenger-typecheck.log artifacts/passenger-typecheck.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/passenger-typecheck.log
+          git commit -m "ci: update passenger typecheck diagnostic" || true
+          git push origin HEAD:feature/passenger-app
+      - name: Fail if typecheck failed
+        if: steps.check.outputs.exit_code != '0'
+        run: exit 1
