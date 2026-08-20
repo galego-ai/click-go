@@ -1,0 +1,26 @@
+name: Passenger App Typecheck
+
+on:
+  push:
+    branches:
+      - feature/passenger-app
+    paths:
+      - 'apps/passenger/**'
+      - '.github/workflows/passenger-typecheck.yml'
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/passenger
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/passenger/package.json
+      - run: npm install
+      - run: npm run typecheck
