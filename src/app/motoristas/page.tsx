@@ -1,5 +1,2 @@
-export default function Page(){return <>
-<div className="topbar"><div><div className="eyebrow">Operação</div><h1 className="title">Motoristas</h1><p className="subtitle">Aprovação, bloqueios e acompanhamento dos motoristas por cidade e franquia.</p></div><div className="toolbar"><button className="button secondary">Pendentes</button><button className="button secondary">Online agora</button></div></div>
-<div className="grid-3"><div className="card"><div className="label">Motoristas</div><div className="metric">0</div></div><div className="card"><div className="label">Online</div><div className="metric kpi-good">0</div></div><div className="card"><div className="label">Aguardando aprovação</div><div className="metric kpi-warn">0</div></div></div>
-<div className="section"><div className="table-wrap"><table className="table"><thead><tr><th>Motorista</th><th>Cidade</th><th>Franquia</th><th>Status</th><th>Online</th><th>Avaliação</th><th>Ações</th></tr></thead><tbody><tr><td colSpan={7} className="empty">Nenhum motorista cadastrado.</td></tr></tbody></table></div></div>
-</>}
+import OperationsManager from '@/components/OperationsManager'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Operação</div><h1 className="title">Motoristas</h1><p className="subtitle">Aprove, rejeite ou bloqueie motoristas e acompanhe situação online e avaliação em tempo real.</p></div></div><OperationsManager kind="drivers"/></>}
