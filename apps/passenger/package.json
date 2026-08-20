@@ -13,6 +13,7 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "latest",
     "@supabase/supabase-js": "latest",
+    "react-native-url-polyfill": "latest",
     "expo": "^57.0.0",
     "expo-constants": "~57.0.0",
     "expo-linking": "~57.0.0",
