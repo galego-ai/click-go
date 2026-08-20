@@ -2,7 +2,3 @@
 > click-go-passenger@0.1.0 typecheck
 > tsc --noEmit
 
-app/home.tsx(13,976): error TS1005: ')' expected.
-app/home.tsx(13,981): error TS1128: Declaration or statement expected.
-app/home.tsx(13,984): error TS1005: ';' expected.
-app/home.tsx(22,1): error TS1128: Declaration or statement expected.
