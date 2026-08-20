@@ -11,6 +11,9 @@ on:
 permissions:
   contents: write
 
+env:
+  BUILD_TRIGGER: "2"
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
