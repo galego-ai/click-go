@@ -1,5 +1,2 @@
-export default function Page(){return <>
-<div className="topbar"><div><div className="eyebrow">Mobilidade</div><h1 className="title">Corridas</h1><p className="subtitle">Acompanhe corridas em andamento, concluídas e canceladas em toda a rede CLICK-GO.</p></div><div className="toolbar"><button className="button secondary">Em andamento</button><button className="button secondary">Concluídas</button><button className="button secondary">Canceladas</button></div></div>
-<div className="grid-3"><div className="card"><div className="label">Em andamento</div><div className="metric kpi-warn">0</div></div><div className="card"><div className="label">Concluídas</div><div className="metric kpi-good">0</div></div><div className="card"><div className="label">Canceladas</div><div className="metric kpi-bad">0</div></div></div>
-<div className="section"><div className="table-wrap"><table className="table"><thead><tr><th>Corrida</th><th>Cidade</th><th>Franquia</th><th>Passageiro</th><th>Motorista</th><th>Status</th><th>Valor</th><th>Solicitada</th></tr></thead><tbody><tr><td colSpan={8} className="empty">Nenhuma corrida registrada.</td></tr></tbody></table></div></div>
-</>}
+import OperationsManager from '@/components/OperationsManager'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Mobilidade</div><h1 className="title">Corridas</h1><p className="subtitle">Acompanhe em tempo real solicitações, corridas em andamento, concluídas e canceladas.</p></div></div><OperationsManager kind="rides"/></>}
