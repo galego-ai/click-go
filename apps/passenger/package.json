@@ -29,6 +29,6 @@
   },
   "devDependencies": {
     "@types/react": "latest",
-    "typescript": "latest"
+    "typescript": "~5.9.3"
   }
 }
