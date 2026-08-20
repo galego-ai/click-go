@@ -12,7 +12,8 @@ permissions:
   contents: write
 
 env:
-  BUILD_TRIGGER: "2"
+  BUILD_TRIGGER: "3"
+  GOOGLE_MAPS_PASSENGER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_PASSENGER_ANDROID_KEY }}
 
 jobs:
   build-apk:
