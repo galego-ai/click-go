@@ -1,0 +1,7 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <>
+<div className="topbar"><div><div className="eyebrow">Financeiro da matriz</div><h1 className="title">Faturamento</h1><p className="subtitle">Acompanhe receita geral, por cidade e por franqueado, incluindo mensalidades, uso e comissão da matriz.</p></div><div className="toolbar"><button className="button">Gerar relatório</button><button className="button secondary">Exportar CSV</button></div></div>
+<div className="grid-3"><div className="card"><div className="label">Faturamento geral</div><div className="metric">R$ 0,00</div></div><div className="card"><div className="label">Receita de mensalidades</div><div className="metric">R$ 0,00</div></div><div className="card"><div className="label">Comissão da matriz</div><div className="metric">R$ 0,00</div></div></div>
+<div className="section"><h2>Por cidade</h2><div className="table-wrap"><table className="table"><thead><tr><th>Cidade</th><th>Corridas</th><th>Valor bruto</th><th>Receita matriz</th></tr></thead><tbody><tr><td colSpan={4} className="empty">Sem movimentação.</td></tr></tbody></table></div></div>
+<div className="section"><h2>Por franqueado</h2><div className="table-wrap"><table className="table"><thead><tr><th>Franqueado</th><th>Mensalidade</th><th>Uso</th><th>Comissão</th><th>Total devido</th></tr></thead><tbody><tr><td colSpan={5} className="empty">Sem movimentação.</td></tr></tbody></table></div></div>
+</>}
