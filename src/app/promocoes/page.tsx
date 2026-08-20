@@ -1,2 +1,2 @@
-import ModulePage from '@/components/ModulePage'
-export default function Page(){return <ModulePage eyebrow="Marketing" title="Promoções" subtitle="Gerencie campanhas, descontos, cashback e bônus por cidade ou franquia." actions={['+ Nova promoção']} items={[{n:23,title:'Promoções',description:'Campanhas com período de validade, tipo de benefício, valor, cidade/franquia alvo e ativação ou pausa.'}]}/>}
+import PromotionManager from '@/components/PromotionManager'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Marketing</div><h1 className="title">Promoções</h1><p className="subtitle">Gerencie campanhas, descontos, cashback e bônus com período de validade e ativação.</p></div></div><PromotionManager/></>}
