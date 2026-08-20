@@ -1,0 +1,69 @@
+name: Passenger APK Main Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/passenger-apk-main.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout passenger branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/passenger-app
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - id: install
+        name: Install dependencies
+        working-directory: apps/passenger
+        run: npm install
+      - id: typecheck
+        name: Typecheck
+        working-directory: apps/passenger
+        run: npm run typecheck
+      - id: prebuild
+        name: Expo prebuild
+        working-directory: apps/passenger
+        run: npx expo prebuild --platform android --non-interactive
+      - id: gradle
+        name: Build debug APK
+        working-directory: apps/passenger/android
+        run: ./gradlew assembleDebug
+      - id: collect
+        name: Collect APK
+        working-directory: apps/passenger
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-passageiro-teste.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-go-passageiro-teste
+          path: apps/passenger/click-go-passageiro-teste.apk
+          if-no-files-found: error
+      - name: Persist run id
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p artifacts
+          printf 'run_id=%s\ninstall=%s\ntypecheck=%s\nprebuild=%s\ngradle=%s\ncollect=%s\n' '${{ github.run_id }}' '${{ steps.install.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.collect.outcome }}' > artifacts/passenger-apk-main-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/passenger-apk-main-status.txt
+          git commit -m "build: persist passenger APK main status" || exit 0
+          git push origin HEAD:feature/passenger-app
