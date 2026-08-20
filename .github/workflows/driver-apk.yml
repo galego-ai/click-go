@@ -1,0 +1,62 @@
+name: Driver APK Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch do App do Motorista
+        required: true
+        default: feature/driver-app
+  push:
+    branches:
+      - feature/driver-app
+    paths:
+      - 'apps/driver/**'
+      - '.github/workflows/driver-apk.yml'
+
+permissions:
+  contents: write
+
+env:
+  SOURCE_REF: ${{ github.event.inputs.source_ref || 'feature/driver-app' }}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout driver branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        working-directory: apps/driver
+        run: npm install
+      - name: Typecheck
+        working-directory: apps/driver
+        run: npm run typecheck
+      - name: Expo prebuild
+        working-directory: apps/driver
+        run: npx expo prebuild --platform android --non-interactive
+      - name: Build debug APK
+        working-directory: apps/driver/android
+        run: ./gradlew assembleDebug
+      - name: Collect APK
+        working-directory: apps/driver
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-motorista-teste.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-go-motorista-teste
+          path: apps/driver/click-go-motorista-teste.apk
+          if-no-files-found: error
