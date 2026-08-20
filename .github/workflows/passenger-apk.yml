@@ -1,0 +1,49 @@
+name: Passenger APK Build
+
+on:
+  push:
+    branches:
+      - feature/passenger-app
+    paths:
+      - 'apps/passenger/**'
+      - '.github/workflows/passenger-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/passenger
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/passenger/package.json
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: npm install
+      - name: Expo prebuild
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        run: npx expo prebuild --platform android --non-interactive
+      - name: Build debug APK
+        working-directory: apps/passenger/android
+        run: ./gradlew assembleDebug
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-passageiro-teste.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-go-passageiro-teste
+          path: apps/passenger/click-go-passageiro-teste.apk
+          if-no-files-found: error
