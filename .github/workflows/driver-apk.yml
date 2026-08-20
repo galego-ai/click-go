@@ -1,0 +1,73 @@
+name: Driver APK Build
+
+on:
+  push:
+    branches:
+      - feature/driver-app
+    paths:
+      - 'apps/driver/**'
+      - '.github/workflows/driver-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/driver
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/driver-app
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/driver/package.json
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: npm install
+      - name: Expo prebuild
+        run: npx expo prebuild --platform android --non-interactive
+      - name: Build debug APK
+        working-directory: apps/driver/android
+        run: ./gradlew assembleDebug
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-motorista-teste.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-go-motorista-teste
+          path: apps/driver/click-go-motorista-teste.apk
+          if-no-files-found: error
+      - name: Commit APK to branch
+        if: success()
+        working-directory: .
+        run: |
+          mkdir -p artifacts
+          cp apps/driver/click-go-motorista-teste.apk artifacts/click-go-motorista-teste.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/click-go-motorista-teste.apk
+          git commit -m "build: add driver test APK" || exit 0
+          git push origin HEAD:feature/driver-app
+      - name: Commit build diagnostic
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p artifacts
+          printf 'workflow=%s\njob=%s\ncommit=%s\n' "${{ job.status }}" "build-apk" "${{ github.sha }}" > artifacts/driver-apk-status.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/driver-apk-status.txt
+          git commit -m "build: record driver APK status" || exit 0
+          git push origin HEAD:feature/driver-app || true
