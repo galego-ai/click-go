@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Operação" title="Passageiros" subtitle="Acompanhe a base de passageiros por cidade e franquia." actions={['Exportar passageiros']} items={[{n:12,title:'Número de passageiros',description:'Indicadores gerais e segmentação por cidade, franquia, status da conta e atividade recente.'}]}/>}
