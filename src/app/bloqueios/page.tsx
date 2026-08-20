@@ -1,2 +1,2 @@
-import ModulePage from '@/components/ModulePage'
-export default function Page(){return <ModulePage eyebrow="Segurança operacional" title="Bloqueios" subtitle="Centralize bloqueios e desbloqueios de franquias, administradores, motoristas e passageiros." actions={['+ Novo bloqueio','Desbloquear']} items={[{n:24,title:'Bloqueios',description:'Registro de motivo, responsável pelo bloqueio, data/hora, status e reativação sem perda de histórico.'}]}/>}
+import BlockManager from '@/components/BlockManager'
+export default function Page(){return <><div className="topbar"><div><div className="eyebrow">Segurança operacional</div><h1 className="title">Bloqueios</h1><p className="subtitle">Bloqueie ou reative franquias, motoristas e passageiros preservando o histórico da operação.</p></div></div><BlockManager/></>}
