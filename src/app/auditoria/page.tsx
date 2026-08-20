@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Governança" title="Auditoria & Logs" subtitle="Registre ações sensíveis do Super Admin e dos administradores de franquia para rastreabilidade." actions={['Exportar logs']} items={[{n:26,title:'Auditoria e logs',description:'Histórico de criação, edição, bloqueio, exclusão, aprovação, alteração de tarifa, plano, pagamento, repasse e acessos administrativos.'}]}/>}
