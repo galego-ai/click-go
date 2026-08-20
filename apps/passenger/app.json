@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "CLICK-GO Passageiro",
+    "slug": "click-go-passenger",
+    "scheme": "clickgo",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "expo-router",
+      ["expo-location", {"locationWhenInUsePermission": "Permita que o CLICK-GO use sua localização para encontrar motoristas e calcular rotas."}],
+      "expo-secure-store"
+    ],
+    "android": {
+      "package": "br.com.clickgo.passageiro",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "ios": {
+      "bundleIdentifier": "br.com.clickgo.passageiro",
+      "supportsTablet": false
+    },
+    "experiments": {"typedRoutes": true}
+  }
+}
