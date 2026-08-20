@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import * as Location from 'expo-location'
 import { router } from 'expo-router'
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps'
 import { supabase } from '@/lib/supabase'
 import { colors } from '@/lib/theme'
 
@@ -173,9 +174,7 @@ export default function Home() {
       return
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.replace('/login')
       return
@@ -224,11 +223,51 @@ export default function Home() {
         <Pressable onPress={() => router.push('/history')}><Text style={s.link}>Histórico</Text></Pressable>
       </View>
 
-      <View style={s.map}>
-        <Text style={s.mapPin}>●</Text>
-        <Text style={s.mapText}>Sua localização</Text>
-        <Text style={s.mapSub}>{origin}</Text>
-        {routeReady && <Text style={s.routeInfo}>{distance.toFixed(1)} km • aprox. {minutes} min</Text>}
+      <View style={s.mapWrap}>
+        {coords ? (
+          <MapView
+            provider={PROVIDER_GOOGLE}
+            style={StyleSheet.absoluteFillObject}
+            showsUserLocation
+            showsMyLocationButton
+            region={{
+              latitude: coords.lat,
+              longitude: coords.lng,
+              latitudeDelta: routeReady ? 0.08 : 0.025,
+              longitudeDelta: routeReady ? 0.08 : 0.025,
+            }}
+          >
+            <Marker coordinate={{ latitude: coords.lat, longitude: coords.lng }} title="Embarque" description={origin} />
+            {destCoords && (
+              <>
+                <Marker
+                  coordinate={{ latitude: destCoords.lat, longitude: destCoords.lng }}
+                  title="Destino"
+                  description={destination}
+                  pinColor="#FFD400"
+                />
+                <Polyline
+                  coordinates={[
+                    { latitude: coords.lat, longitude: coords.lng },
+                    { latitude: destCoords.lat, longitude: destCoords.lng },
+                  ]}
+                  strokeWidth={5}
+                />
+              </>
+            )}
+          </MapView>
+        ) : (
+          <View style={s.mapFallback}>
+            <Text style={s.mapPin}>●</Text>
+            <Text style={s.mapText}>Localizando...</Text>
+            <Text style={s.mapSub}>{origin}</Text>
+          </View>
+        )}
+        {routeReady && (
+          <View style={s.routeBadge}>
+            <Text style={s.routeInfo}>{distance.toFixed(1)} km • aprox. {minutes} min</Text>
+          </View>
+        )}
       </View>
 
       <View style={s.card}>
@@ -307,11 +346,13 @@ const s = StyleSheet.create({
   header: { marginTop: 42, marginBottom: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logo: { color: colors.yellow, fontSize: 26, fontWeight: '900' },
   link: { color: colors.yellow, fontWeight: '700' },
-  map: { height: 220, backgroundColor: '#101820', borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line, padding: 16 },
+  mapWrap: { height: 250, borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: colors.line, position: 'relative' },
+  mapFallback: { flex: 1, backgroundColor: '#101820', alignItems: 'center', justifyContent: 'center', padding: 16 },
   mapPin: { color: colors.yellow, fontSize: 36 },
   mapText: { color: colors.white, fontWeight: '800', fontSize: 18 },
   mapSub: { color: colors.muted, marginTop: 6, textAlign: 'center' },
-  routeInfo: { color: colors.yellow, fontWeight: '800', marginTop: 10 },
+  routeBadge: { position: 'absolute', bottom: 12, left: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.78)', borderRadius: 12, padding: 10 },
+  routeInfo: { color: colors.yellow, fontWeight: '800', textAlign: 'center' },
   card: { backgroundColor: colors.panel, borderRadius: 18, padding: 16, marginTop: 16, borderWidth: 1, borderColor: colors.line },
   label: { color: colors.white, fontWeight: '800', marginBottom: 10 },
   input: { backgroundColor: '#0b0b0b', color: colors.white, borderRadius: 14, padding: 15, borderWidth: 1, borderColor: colors.line },
