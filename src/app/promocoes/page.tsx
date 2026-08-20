@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Marketing" title="Promoções" subtitle="Gerencie campanhas, descontos, cashback e bônus por cidade ou franquia." actions={['+ Nova promoção']} items={[{n:23,title:'Promoções',description:'Campanhas com período de validade, tipo de benefício, valor, cidade/franquia alvo e ativação ou pausa.'}]}/>}
