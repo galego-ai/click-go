@@ -1,0 +1,2 @@
+import ModulePage from '@/components/ModulePage'
+export default function Page(){return <ModulePage eyebrow="Financeiro" title="Pagamentos pendentes" subtitle="Acompanhe cobranças Pix, cartão, dinheiro e carteira, com status e referência do provedor." actions={['Atualizar status','Exportar']} items={[{n:19,title:'Pagamentos pendentes',description:'Fila de pagamentos pendentes, autorizados, pagos, falhos, estornados ou cancelados, vinculados à corrida e franquia.'}]}/>}
