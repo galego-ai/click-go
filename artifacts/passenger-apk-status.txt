@@ -1,0 +1,6 @@
+install=success
+typecheck=success
+prebuild=success
+gradle=cancelled
+verify=skipped
+collect=skipped
