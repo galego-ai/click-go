@@ -1,1 +1,2 @@
 CLICK-GO Passageiro - build de teste 2026-08-20
+Rebuild com variáveis Supabase 2026-08-21 20:40 BRT
