@@ -2,4 +2,3 @@
 > click-go-passenger@0.1.0 typecheck
 > tsc --noEmit
 
-app/home.tsx(230,31): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
