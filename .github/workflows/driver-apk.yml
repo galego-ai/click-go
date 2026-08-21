@@ -19,6 +19,7 @@ permissions:
 
 env:
   SOURCE_REF: ${{ github.event.inputs.source_ref || 'feature/driver-app' }}
+  GOOGLE_MAPS_DRIVER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_DRIVER_ANDROID_KEY }}
 
 jobs:
   build-apk:
