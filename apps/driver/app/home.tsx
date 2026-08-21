@@ -89,7 +89,7 @@ export default function Home() {
         {loc ? (
           <MapView
             provider={PROVIDER_GOOGLE}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             showsUserLocation
             showsMyLocationButton
             initialRegion={{
