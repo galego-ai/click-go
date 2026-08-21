@@ -3,7 +3,7 @@ import FranchiseGuard from '@/components/FranchiseGuard'
 
 const groups=[
  {title:'Visão geral',items:[['Dashboard','/franqueado']]},
- {title:'Operação',items:[['Motoristas','/franqueado/motoristas'],['Passageiros','/franqueado/passageiros'],['Corridas','/franqueado/corridas'],['Mapa em tempo real','/franqueado/mapa']]},
+ {title:'Operação',items:[['Motoristas','/franqueado/motoristas'],['Passageiros','/franqueado/passageiros'],['Corridas & Chamados','/franqueado/corridas'],['Mapa em tempo real','/franqueado/mapa'],['Mapa de calor','/franqueado/mapa-calor']]},
  {title:'Preços & oferta',items:[['Categorias & Tarifas','/franqueado/tarifas'],['Áreas & Horários','/franqueado/configuracoes']]},
  {title:'Financeiro',items:[['Faturamento & Comissão','/franqueado/financeiro'],['Extrato & Repasses','/franqueado/repasses']]},
  {title:'Marketing',items:[['Cupons & Promoções','/franqueado/marketing']]},
