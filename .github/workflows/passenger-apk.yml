@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GOOGLE_MAPS_PASSENGER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_PASSENGER_ANDROID_KEY }}
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
