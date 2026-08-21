@@ -1,7 +1,10 @@
-install=success
-typecheck=success
-prebuild=success
-gradle_config=success
-gradle=failure
+build_sha=d89e31ed6c2c030a8450ca32a34d6762c7aa9007
+run_id=32535644988
+built_at=2026-08-21T23:07:00Z
+install=skipped
+typecheck=skipped
+prebuild=skipped
+gradle_config=skipped
+gradle=skipped
 verify=skipped
 collect=skipped
