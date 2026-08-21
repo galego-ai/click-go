@@ -1,6 +1,7 @@
 install=success
 typecheck=success
 prebuild=success
-gradle=cancelled
+gradle_config=success
+gradle=failure
 verify=skipped
 collect=skipped
