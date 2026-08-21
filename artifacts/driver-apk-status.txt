@@ -1,3 +1,3 @@
-workflow=failure
+workflow=cancelled
 job=build-apk
-commit=aceea8b5f8848ad71e190636619551d0cc34fdcf
+commit=f7c7b9d2ae7e7061325cd317b1a801fcfd64cc8f
