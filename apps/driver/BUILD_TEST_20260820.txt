@@ -1,1 +1,2 @@
 CLICK-GO Motorista - build de teste 2026-08-20
+rebuild apos configurar variaveis Supabase 2026-08-21 20:10 BRT
