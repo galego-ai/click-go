@@ -14,7 +14,6 @@ permissions:
 
 env:
   GOOGLE_MAPS_DRIVER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_DRIVER_ANDROID_KEY }}
-  NODE_ENV: production
 
 jobs:
   build-apk:
@@ -44,23 +43,16 @@ jobs:
         run: npx tsc --noEmit
       - name: Expo prebuild
         run: npx expo prebuild --platform android --non-interactive
-      - name: Embed JavaScript bundle
-        run: |
-          mkdir -p android/app/src/main/assets
-          mkdir -p android/app/src/main/res
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file node_modules/expo-router/entry.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
-      - name: Build standalone debug APK
+      - name: Build standalone release APK
         working-directory: apps/driver/android
-        run: ./gradlew assembleDebug
-      - name: Verify embedded bundle
-        run: test -s android/app/src/main/assets/index.android.bundle
+        env:
+          NODE_ENV: production
+        run: ./gradlew assembleRelease
+      - name: Verify JavaScript bundle inside APK
+        run: |
+          unzip -l android/app/build/outputs/apk/release/app-release.apk | grep -q 'assets/index.android.bundle'
       - name: Collect APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk click-go-motorista-teste.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk click-go-motorista-teste.apk
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -76,7 +68,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add artifacts/click-go-motorista-teste.apk
-          git commit -m "build: add standalone driver test APK" || exit 0
+          git commit -m "build: add standalone driver release APK" || exit 0
           git push origin HEAD:feature/driver-app
       - name: Commit build diagnostic
         if: always()
