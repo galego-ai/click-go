@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GOOGLE_MAPS_DRIVER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_DRIVER_ANDROID_KEY }}
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -36,6 +39,8 @@ jobs:
         uses: android-actions/setup-android@v3
       - name: Install dependencies
         run: npm install
+      - name: Typecheck
+        run: npx tsc --noEmit
       - name: Expo prebuild
         run: npx expo prebuild --platform android --non-interactive
       - name: Build debug APK
