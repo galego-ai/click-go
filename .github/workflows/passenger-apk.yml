@@ -111,3 +111,5 @@ jobs:
           if [ -f artifacts/click-go-passageiro-teste.apk ]; then git add artifacts/click-go-passageiro-teste.apk; fi
           git commit -m "build: persist passenger release APK diagnostics" || exit 0
           git push origin HEAD:feature/passenger-app
+
+# build trigger 2026-08-21
