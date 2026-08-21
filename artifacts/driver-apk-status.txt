@@ -1,3 +1,7 @@
-workflow=failure
-job=build-apk
-commit=0e6eb37147f1efa38c8e185c0abffb45830c65fb
+install=success
+typecheck=success
+prebuild=success
+gradle_config=success
+gradle=failure
+verify=skipped
+collect=skipped
