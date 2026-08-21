@@ -41,9 +41,14 @@ jobs:
         name: Install dependencies
         continue-on-error: true
         run: npm install
+      - id: typecheck
+        name: Typecheck
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: npx tsc --noEmit
       - id: prebuild
         name: Expo prebuild
-        if: steps.install.outcome == 'success'
+        if: steps.typecheck.outcome == 'success'
         continue-on-error: true
         run: npx expo prebuild --platform android --non-interactive
       - id: gradle
@@ -69,7 +74,7 @@ jobs:
         working-directory: .
         run: |
           mkdir -p artifacts
-          printf 'install=%s\nprebuild=%s\ngradle=%s\ncollect=%s\n' '${{ steps.install.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.collect.outcome }}' > artifacts/passenger-apk-status.txt
+          printf 'install=%s\ntypecheck=%s\nprebuild=%s\ngradle=%s\ncollect=%s\n' '${{ steps.install.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.collect.outcome }}' > artifacts/passenger-apk-status.txt
           if [ -f apps/passenger/click-go-passageiro-teste.apk ]; then
             cp apps/passenger/click-go-passageiro-teste.apk artifacts/click-go-passageiro-teste.apk
           fi
