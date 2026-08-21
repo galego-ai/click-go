@@ -72,7 +72,9 @@ jobs:
         working-directory: apps/passenger/android
         env:
           NODE_ENV: production
-        run: ./gradlew assembleRelease --no-daemon --max-workers=2
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease --no-daemon --max-workers=2 --stacktrace 2>&1 | tee ../gradle-build.log
       - id: verify
         name: Verify JavaScript bundle inside APK
         if: steps.gradle.outcome == 'success'
@@ -90,18 +92,22 @@ jobs:
           name: click-go-passageiro-teste
           path: apps/passenger/click-go-passageiro-teste.apk
           if-no-files-found: error
-      - name: Persist build result
+      - name: Persist build result and Gradle error
         if: always()
         working-directory: .
         run: |
           mkdir -p artifacts
           printf 'install=%s\ntypecheck=%s\nprebuild=%s\ngradle_config=%s\ngradle=%s\nverify=%s\ncollect=%s\n' '${{ steps.install.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle_config.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.verify.outcome }}' '${{ steps.collect.outcome }}' > artifacts/passenger-apk-status.txt
+          if [ -f apps/passenger/gradle-build.log ]; then
+            tail -n 220 apps/passenger/gradle-build.log > artifacts/passenger-gradle-error.log
+          fi
           if [ -f apps/passenger/click-go-passageiro-teste.apk ]; then
             cp apps/passenger/click-go-passageiro-teste.apk artifacts/click-go-passageiro-teste.apk
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add artifacts/passenger-apk-status.txt
+          if [ -f artifacts/passenger-gradle-error.log ]; then git add artifacts/passenger-gradle-error.log; fi
           if [ -f artifacts/click-go-passageiro-teste.apk ]; then git add artifacts/click-go-passageiro-teste.apk; fi
-          git commit -m "build: persist passenger release APK result" || exit 0
+          git commit -m "build: persist passenger release APK diagnostics" || exit 0
           git push origin HEAD:feature/passenger-app
