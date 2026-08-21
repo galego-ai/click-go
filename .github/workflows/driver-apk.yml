@@ -14,6 +14,8 @@ permissions:
 
 env:
   GOOGLE_MAPS_DRIVER_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_DRIVER_ANDROID_KEY }}
+  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
   NODE_OPTIONS: --max-old-space-size=4096
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2
 
@@ -40,6 +42,10 @@ jobs:
           java-version: '17'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+      - name: Validate public app configuration
+        run: |
+          test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "Missing EXPO_PUBLIC_SUPABASE_URL"; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" || { echo "Missing EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY"; exit 1; }
       - id: install
         name: Install dependencies
         continue-on-error: true
