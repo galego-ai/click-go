@@ -227,7 +227,7 @@ export default function Home() {
         {coords ? (
           <MapView
             provider={PROVIDER_GOOGLE}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             showsUserLocation
             showsMyLocationButton
             region={{
