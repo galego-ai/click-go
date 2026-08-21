@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feature/driver-app
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -43,6 +44,18 @@ jobs:
         name: Install dependencies
         continue-on-error: true
         run: npm install
+      - name: Dependency diagnostics
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: |
+          {
+            echo "build_sha=$GITHUB_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "node=$(node --version)"
+            echo "npm=$(npm --version)"
+            npm ls expo react-native expo-modules-core react-native-reanimated react-native-worklets --all || true
+          } | tee dependency-diagnostics.log
       - id: typecheck
         name: Typecheck
         if: steps.install.outcome == 'success'
@@ -92,24 +105,21 @@ jobs:
           name: click-go-motorista-teste
           path: apps/driver/click-go-motorista-teste.apk
           if-no-files-found: error
-      - name: Persist build result and Gradle error
+      - name: Persist build diagnostics
         if: always()
         working-directory: .
         run: |
           mkdir -p artifacts
-          printf 'install=%s\ntypecheck=%s\nprebuild=%s\ngradle_config=%s\ngradle=%s\nverify=%s\ncollect=%s\n' '${{ steps.install.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle_config.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.verify.outcome }}' '${{ steps.collect.outcome }}' > artifacts/driver-apk-status.txt
-          if [ -f apps/driver/gradle-build.log ]; then
-            tail -n 220 apps/driver/gradle-build.log > artifacts/driver-gradle-error.log
-          fi
-          if [ -f apps/driver/click-go-motorista-teste.apk ]; then
-            cp apps/driver/click-go-motorista-teste.apk artifacts/click-go-motorista-teste.apk
-          fi
+          printf 'build_sha=%s\nrun_id=%s\nbuilt_at=%s\ninstall=%s\ntypecheck=%s\nprebuild=%s\ngradle_config=%s\ngradle=%s\nverify=%s\ncollect=%s\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '${{ steps.install.outcome }}' '${{ steps.typecheck.outcome }}' '${{ steps.prebuild.outcome }}' '${{ steps.gradle_config.outcome }}' '${{ steps.gradle.outcome }}' '${{ steps.verify.outcome }}' '${{ steps.collect.outcome }}' > artifacts/driver-apk-status.txt
+          if [ -f apps/driver/dependency-diagnostics.log ]; then cp apps/driver/dependency-diagnostics.log artifacts/driver-dependency-diagnostics.log; fi
+          if [ -f apps/driver/gradle-build.log ]; then tail -n 300 apps/driver/gradle-build.log > artifacts/driver-gradle-error.log; fi
+          if [ -f apps/driver/click-go-motorista-teste.apk ]; then cp apps/driver/click-go-motorista-teste.apk artifacts/click-go-motorista-teste.apk; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add artifacts/driver-apk-status.txt
+          if [ -f artifacts/driver-dependency-diagnostics.log ]; then git add artifacts/driver-dependency-diagnostics.log; fi
           if [ -f artifacts/driver-gradle-error.log ]; then git add artifacts/driver-gradle-error.log; fi
           if [ -f artifacts/click-go-motorista-teste.apk ]; then git add artifacts/click-go-motorista-teste.apk; fi
-          git commit -m "build: persist driver release APK diagnostics" || exit 0
+          git commit -m "build: persist driver APK diagnostics for $GITHUB_SHA" || exit 0
+          git pull --rebase origin feature/driver-app || true
           git push origin HEAD:feature/driver-app || true
-
-# build trigger 2026-08-21
