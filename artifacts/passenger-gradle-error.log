@@ -1,0 +1,220 @@
+      |     ^
+/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native/ReactCommon/react/renderer/core/RawPropsParser.h:31:5: note: 'RawPropsParser' has been explicitly marked deprecated here
+   31 |   [[deprecated]] explicit RawPropsParser(bool /* ignored */) : RawPropsParser() {}
+      |     ^
+1 warning generated.
+[55/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/AndroidExpoViewComponentDescriptor.cpp.o
+ninja: build stopped: subcommand failed.
+
+C++ build system [build] failed while executing:
+    /usr/local/lib/android/sdk/cmake/3.22.1/bin/ninja \
+      -C \
+      /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a \
+      expo-modules-core
+  from /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:69)
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:129)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.doExecute(StandardTaskAction.java:58)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:51)
+	at org.gradle.api.internal.project.taskfactory.StandardTaskAction.execute(StandardTaskAction.java:29)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$3.run(TaskExecution.java:259)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:29)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$1.execute(DefaultBuildOperationRunner.java:26)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:47)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:244)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:227)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:210)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:176)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:110)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:64)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:61)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:209)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:166)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:61)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:47)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:51)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:29)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:70)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.executeMutable(RemovePreviousOutputsStep.java:40)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:62)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:27)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.executeMutable(ResolveInputChangesStep.java:28)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:192)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:76)
+	at org.gradle.internal.Either$Right.fold(Either.java:176)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:74)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:49)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:63)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.executeMutable(ResolveChangesStep.java:34)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:64)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:42)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:77)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:133)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:59)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:77)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.executeMutable(HandleStaleOutputsStep.java:43)
+	at org.gradle.internal.execution.steps.MutableStep.execute(MutableStep.java:25)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:305)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:44)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:31)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:68)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:132)
+	... 30 more
+Caused by: com.android.ide.common.process.ProcessException: ninja: Entering directory `/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a'
+[1/62] Building CXX object CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch
+[2/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/cmake_pch.hxx.pch
+[3/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/NativeModule.cpp.o
+[4/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/JSI/MemoryBuffer.cpp.o
+[5/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/LazyObject.cpp.o
+[6/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/JSI/ObjectDeallocator.cpp.o
+[7/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/JSI/JSIUtils.cpp.o
+[8/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/SharedObject.cpp.o
+[9/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/SharedRef.cpp.o
+[10/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/JSI/TypedArray.cpp.o
+[11/62] Building CXX object CMakeFiles/expo-modules-jsi.dir/src/jsi/JSReferencesCache.cpp.o
+[12/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JNIInjector.cpp.o
+[13/62] Linking CXX static library libexpo-modules-jsi.a
+[14/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/fabric/ExpoViewState.cpp.o
+[15/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/EventEmitter.cpp.o
+[16/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/fabric/ExpoViewEventEmitter.cpp.o
+[17/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/Exceptions.cpp.o
+[18/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JNIDeallocator.cpp.o
+[19/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JNIFunctionBody.cpp.o
+[20/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/ExpoModulesHostObject.cpp.o
+[21/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/fabric/ExpoViewProps.cpp.o
+[22/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JSharedObject.cpp.o
+[23/62] Building CXX object CMakeFiles/expo-modules-core.dir/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/common/cpp/fabric/ExpoViewShadowNode.cpp.o
+[24/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/types/FrontendConverterProvider.cpp.o
+[25/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaReferencesCache.cpp.o
+[26/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptArrayBuffer.cpp.o
+[27/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JSIContext.cpp.o
+[28/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JNIUtils.cpp.o
+[29/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptModuleObject.cpp.o
+[30/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptRuntime.cpp.o
+[31/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSClassesDecorator.cpp.o
+[32/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptFunction.cpp.o
+[33/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptObject.cpp.o
+[34/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptTypedArray.cpp.o
+[35/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptWeakObject.cpp.o
+[36/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaScriptValue.cpp.o
+[37/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/RuntimeHolder.cpp.o
+[38/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/MethodMetadata.cpp.o
+[39/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/NativeArrayBuffer.cpp.o
+[40/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSObjectDecorator.cpp.o
+[41/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSFunctionsDecorator.cpp.o
+[42/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSPropertiesDecorator.cpp.o
+[43/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSConstantsDecorator.cpp.o
+[44/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/decorators/JSDecoratorsBridgingObject.cpp.o
+[45/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/JavaCallback.cpp.o
+[46/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/AndroidExpoViewState.cpp.o
+[47/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/NativeStatePropsGetter.cpp.o
+[48/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/FabricComponentsRegistry.cpp.o
+[49/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/installers/MainRuntimeInstaller.cpp.o
+[50/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/worklets/WorkletJSCallInvoker.cpp.o
+FAILED: CMakeFiles/expo-modules-core.dir/src/main/cpp/worklets/WorkletJSCallInvoker.cpp.o 
+/usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-none-linux-android24 --sysroot=/usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dexpo_modules_core_EXPORTS -I/home/runner/.gradle/caches/9.3.1/transforms/eb2224229ff93535bf21ac0d1e319da4/transformed/react-android-0.86.0-release/prefab/modules/reactnative/include/react -I/home/runner/.gradle/caches/9.3.1/transforms/eb2224229ff93535bf21ac0d1e319da4/transformed/react-android-0.86.0-release/prefab/modules/reactnative/include/react/fabric -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native/ReactAndroid/src/main/jni -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/src/fabric -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/../common/cpp -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/../common/cpp/fabric -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native/ReactCommon -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native/ReactCommon/jsiexecutor -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native-worklets/Common/cpp -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native-worklets/android/src/main/cpp -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/../common/cpp/JSI -I/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/src/jsi -isystem /home/runner/.gradle/caches/9.3.1/transforms/eb2224229ff93535bf21ac0d1e319da4/transformed/react-android-0.86.0-release/prefab/modules/jsi/include -isystem /home/runner/.gradle/caches/9.3.1/transforms/a380509ee370312f3a5187e825a1b544/transformed/fbjni-0.7.0/prefab/modules/fbjni/include -isystem /home/runner/.gradle/caches/9.3.1/transforms/eb2224229ff93535bf21ac0d1e319da4/transformed/react-android-0.86.0-release/prefab/modules/reactnative/include -isystem /home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native-worklets/android/build/prefab-headers/worklets -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -O2 -g -DNDEBUG -fPIC -DWORKLETS_ENABLED=1 --std=c++20 -O2 -frtti -fexceptions -Wall -fstack-protector-all -DUSE_HERMES=0 -DUNIT_TEST=0 -DIS_NEW_ARCHITECTURE_ENABLED=1 -DRN_FABRIC_ENABLED=1 -DRN_SERIALIZABLE_STATE=1 -DFOLLY_NO_CONFIG=1 -DFOLLY_HAVE_CLOCK_GETTIME=1 -DFOLLY_USE_LIBCPP=1 -DFOLLY_CFG_NO_COROUTINES=1 -DFOLLY_MOBILE=1 -DFOLLY_HAVE_RECVMMSG=1 -DFOLLY_HAVE_PTHREAD=1 -DFOLLY_HAVE_XSI_STRERROR_R=1 -DREACT_NATIVE_TARGET_VERSION=86 -DREACT_NATIVE_MINOR_VERSION=86 -std=gnu++20 -Winvalid-pch -Xclang -include-pch -Xclang /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx.pch -Xclang -include -Xclang /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a/CMakeFiles/expo-modules-core.dir/cmake_pch.hxx -MD -MT CMakeFiles/expo-modules-core.dir/src/main/cpp/worklets/WorkletJSCallInvoker.cpp.o -MF CMakeFiles/expo-modules-core.dir/src/main/cpp/worklets/WorkletJSCallInvoker.cpp.o.d -o CMakeFiles/expo-modules-core.dir/src/main/cpp/worklets/WorkletJSCallInvoker.cpp.o -c /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/src/main/cpp/worklets/WorkletJSCallInvoker.cpp
+/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/src/main/cpp/worklets/WorkletJSCallInvoker.cpp:27:21: error: no member named 'executeSync' in 'worklets::WorkletRuntime'
+   27 |     workletRuntime->executeSync([func = std::move(func)](jsi::Runtime &rt) -> jsi::Value {
+      |     ~~~~~~~~~~~~~~~~^
+1 error generated.
+[51/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/AndroidExpoViewProps.cpp.o
+[52/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/installers/WorkletRuntimeInstaller.cpp.o
+[53/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/types/AnyType.cpp.o
+[54/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/ExpoComponentDescriptorFactory.cpp.o
+/home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/src/main/cpp/fabric/ExpoComponentDescriptorFactory.cpp:17:5: warning: 'RawPropsParser' is deprecated [-Wdeprecated-declarations]
+   17 |     react::RawPropsParser(/*useRawPropsJsiValue=*/true)
+      |     ^
+/home/runner/work/click-go/click-go/apps/passenger/node_modules/react-native/ReactCommon/react/renderer/core/RawPropsParser.h:31:5: note: 'RawPropsParser' has been explicitly marked deprecated here
+   31 |   [[deprecated]] explicit RawPropsParser(bool /* ignored */) : RawPropsParser() {}
+      |     ^
+1 warning generated.
+[55/62] Building CXX object CMakeFiles/expo-modules-core.dir/src/main/cpp/fabric/AndroidExpoViewComponentDescriptor.cpp.o
+ninja: build stopped: subcommand failed.
+
+C++ build system [build] failed while executing:
+    /usr/local/lib/android/sdk/cmake/3.22.1/bin/ninja \
+      -C \
+      /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a \
+      expo-modules-core
+  from /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:288)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:108)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt$executeProcess$1.invoke(ExecuteProcess.kt:106)
+	at com.android.build.gradle.internal.cxx.timing.TimingEnvironmentKt.time(TimingEnvironment.kt:32)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess(ExecuteProcess.kt:106)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.executeProcess$default(ExecuteProcess.kt:85)
+	at com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.executeProcessBatch(CxxRegularBuilder.kt:332)
+	at com.android.build.gradle.internal.cxx.build.CxxRegularBuilder.build(CxxRegularBuilder.kt:129)
+	at com.android.build.gradle.tasks.ExternalNativeBuildTask.doTaskAction(ExternalNativeBuildTask.kt:72)
+	at com.android.build.gradle.internal.tasks.UnsafeOutputsTask$taskAction$$inlined$recordTaskAction$1.invoke(BaseTask.kt:59)
+	at com.android.build.gradle.internal.tasks.Blocks.recordSpan(Blocks.java:51)
+	at com.android.build.gradle.internal.tasks.UnsafeOutputsTask.taskAction(UnsafeOutputsTask.kt:81)
+	at org.gradle.internal.reflect.JavaMethod.invoke(JavaMethod.java:125)
+	... 122 more
+Caused by: com.android.ide.common.process.ProcessException: Error while executing process /usr/local/lib/android/sdk/cmake/3.22.1/bin/ninja with arguments {-C /home/runner/work/click-go/click-go/apps/passenger/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/4e4y894h/arm64-v8a expo-modules-core}
+	at com.android.build.gradle.internal.process.GradleProcessResult.buildProcessException(GradleProcessResult.java:73)
+	at com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:48)
+	at com.android.build.gradle.internal.cxx.process.ExecuteProcessKt.execute(ExecuteProcess.kt:277)
+	... 134 more
+Caused by: org.gradle.process.ProcessExecutionException: Process 'command '/usr/local/lib/android/sdk/cmake/3.22.1/bin/ninja'' finished with non-zero exit value 1
+	at org.gradle.process.internal.DefaultExecHandle$ExecResultImpl.assertNormalExitValue(DefaultExecHandle.java:454)
+	at com.android.build.gradle.internal.process.GradleProcessResult.assertNormalExitValue(GradleProcessResult.java:46)
+	... 135 more
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 13m 30s
+92 actionable tasks: 92 executed
