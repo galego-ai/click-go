@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import AppAdvertisingBanner from '@/components/AppAdvertisingBanner'
 
 export default function DriverAppLayout({children}:{children:React.ReactNode}){
  const pathname=usePathname()
@@ -12,6 +13,7 @@ export default function DriverAppLayout({children}:{children:React.ReactNode}){
    <Link href="/motorista-app/operacao" style={{color:pathname.startsWith('/motorista-app/operacao')?'#ffd400':'#e5e7eb',fontWeight:800,textDecoration:'none',padding:'8px',whiteSpace:'nowrap'}}>Operação e corridas</Link>
    <Link href="/motorista-app/carteira" style={{color:pathname.startsWith('/motorista-app/carteira')?'#ffd400':'#e5e7eb',fontWeight:800,textDecoration:'none',padding:'8px',whiteSpace:'nowrap'}}>Carteira</Link>
   </header>
+  <AppAdvertisingBanner audience="driver"/>
   {children}
  </div>
 }
