@@ -9,6 +9,11 @@
     "plugins": [
       "expo-router",
       ["expo-location", {"locationWhenInUsePermission": "Permita que o CLICK-GO use sua localização para encontrar motoristas e calcular rotas."}],
+      ["expo-image-picker", {
+        "photosPermission": "Permita que o CLICK-GO acesse suas fotos para adicionar sua foto de perfil.",
+        "cameraPermission": "Permita que o CLICK-GO use a câmera para tirar sua foto de perfil.",
+        "microphonePermission": false
+      }],
       "expo-secure-store"
     ],
     "android": {
