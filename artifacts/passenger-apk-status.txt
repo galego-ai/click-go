@@ -1,8 +1,8 @@
-build_sha=07f1a5331fc57fd5090abf6d5205276f7034654f
-run_id=32547345702
-built_at=2026-08-22T02:51:38Z
-install=cancelled
-typecheck=skipped
+build_sha=3025ffc6c5ed1cf0feb592e3a5f98f69d1785631
+run_id=32547386623
+built_at=2026-08-22T02:52:55Z
+install=success
+typecheck=failure
 prebuild=skipped
 gradle_config=skipped
 gradle=skipped

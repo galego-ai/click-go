@@ -1,0 +1,102 @@
+build_sha=3025ffc6c5ed1cf0feb592e3a5f98f69d1785631
+run_id=32547386623
+built_at=2026-08-22T02:52:52Z
+node=v22.23.2
+npm=10.9.8
+click-go-passenger@0.1.0 /home/runner/work/click-go/click-go/apps/passenger
+├─┬ @react-native-async-storage/async-storage@3.1.1
+│ └── react-native@0.86.2 deduped
+├─┬ expo-constants@57.0.13
+│ ├── expo@57.0.15 deduped
+│ └── react-native@0.86.2 deduped
+├─┬ expo-image-picker@57.0.12
+│ ├─┬ expo-image-loader@57.0.1
+│ │ └── expo@57.0.15 deduped
+│ └── expo@57.0.15 deduped
+├─┬ expo-linking@57.0.7
+│ └── react-native@0.86.2 deduped
+├─┬ expo-location@57.0.12
+│ └── expo@57.0.15 deduped
+├─┬ expo-router@57.0.15
+│ ├─┬ @expo/log-box@57.0.3
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @expo/metro-runtime@57.0.12
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @expo/ui@57.0.12
+│ │ ├── expo@57.0.15 deduped
+│ │ ├── react-native-worklets@0.10.1 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @react-native-masked-view/masked-view@0.3.2
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ expo-glass-effect@57.0.1
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ expo-symbols@57.0.2
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├── expo@57.0.15 deduped
+│ ├─┬ react-native-drawer-layout@4.2.10
+│ │ ├── react-native-reanimated@4.5.1 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ react-native-gesture-handler@3.2.1
+│ │ └── react-native@0.86.2 deduped
+│ ├── react-native-reanimated@4.5.1 deduped
+│ └── react-native@0.86.2 deduped
+├─┬ expo-secure-store@57.0.1
+│ └── expo@57.0.15 deduped
+├─┬ expo-status-bar@57.0.1
+│ ├── expo@57.0.15 deduped
+│ └── react-native@0.86.2 deduped
+├─┬ expo@57.0.15
+│ ├─┬ @expo/cli@57.0.17
+│ │ ├─┬ @expo/router-server@57.0.7
+│ │ │ └── expo@57.0.15 deduped
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @expo/devtools@57.0.1
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @expo/dom-webview@57.0.1
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ @expo/metro-config@57.0.9
+│ │ └── expo@57.0.15 deduped
+│ ├─┬ babel-preset-expo@57.0.7
+│ │ └── expo@57.0.15 deduped
+│ ├─┬ expo-asset@57.0.13
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ expo-file-system@57.0.5
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ expo-font@57.0.1
+│ │ ├── expo@57.0.15 deduped
+│ │ └── react-native@0.86.2 deduped
+│ ├─┬ expo-keep-awake@57.0.1
+│ │ └── expo@57.0.15 deduped
+│ ├─┬ expo-modules-core@57.0.12
+│ │ ├─┬ expo-modules-jsi@57.0.5
+│ │ │ └── react-native@0.86.2 deduped
+│ │ ├── react-native-worklets@0.10.1 deduped
+│ │ └── react-native@0.86.2 deduped
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-maps@1.27.2
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-reanimated@4.5.1 overridden
+│ ├─┬ react-native-is-edge-to-edge@1.3.1
+│ │ └── react-native@0.86.2 deduped
+│ ├── react-native-worklets@0.10.1 deduped
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-safe-area-context@5.7.0
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-screens@4.26.0
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-url-polyfill@4.0.0
+│ └── react-native@0.86.2 deduped
+├─┬ react-native-worklets@0.10.1 overridden
+│ └── react-native@0.86.2 deduped
+└─┬ react-native@0.86.2
+  └─┬ @react-native/virtualized-lists@0.86.2
+    └── react-native@0.86.2 deduped
+
