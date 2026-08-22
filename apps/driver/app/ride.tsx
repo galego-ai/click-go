@@ -31,20 +31,34 @@ type RideRow = {
   } | null
 }
 
+type RemoteSettings = {
+  taximeter_enabled: boolean
+  taximeter_refresh_seconds: number
+}
+
 export default function Ride() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const [ride, setRide] = useState<RideRow | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [text, setText] = useState('')
+  const [remote, setRemote] = useState<RemoteSettings>({ taximeter_enabled: true, taximeter_refresh_seconds: 10 })
 
   async function load() {
     if (!id) return
 
-    const rideResult = await supabase
-      .from('rides')
-      .select('*,profiles:passenger_id(full_name,phone,avatar_url)')
-      .eq('id', id)
-      .single()
+    const [rideResult, settingsResult] = await Promise.all([
+      supabase
+        .from('rides')
+        .select('*,profiles:passenger_id(full_name,phone,avatar_url)')
+        .eq('id', id)
+        .single(),
+      supabase
+        .from('remote_app_settings')
+        .select('taximeter_enabled,taximeter_refresh_seconds')
+        .eq('scope', 'global')
+        .limit(1)
+        .maybeSingle(),
+    ])
 
     if (rideResult.error) {
       Alert.alert('Corrida', rideResult.error.message)
@@ -52,6 +66,12 @@ export default function Ride() {
     }
 
     setRide(rideResult.data as RideRow)
+    if (settingsResult.data) {
+      setRemote({
+        taximeter_enabled: Boolean(settingsResult.data.taximeter_enabled),
+        taximeter_refresh_seconds: Math.max(1, Number(settingsResult.data.taximeter_refresh_seconds || 10)),
+      })
+    }
 
     const messageResult = await supabase
       .from('ride_chat_messages')
@@ -83,12 +103,23 @@ export default function Ride() {
         },
         load,
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'remote_app_settings' },
+        load,
+      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
   }, [id])
+
+  useEffect(() => {
+    if (!id || !ride || ride.status !== 'in_progress' || !remote.taximeter_enabled) return
+    const timer = setInterval(() => load(), Math.max(1000, remote.taximeter_refresh_seconds * 1000))
+    return () => clearInterval(timer)
+  }, [id, ride?.status, remote.taximeter_enabled, remote.taximeter_refresh_seconds])
 
   async function updateRide(eventType: string, status: string, extra: Record<string, unknown> = {}) {
     if (!id) return
@@ -120,7 +151,7 @@ export default function Ride() {
       ride_id: id,
       driver_id: user.id,
       event_type: eventType,
-      metadata: { source: 'driver_app' },
+      metadata: { source: 'driver_app', remote_taximeter: remote.taximeter_enabled },
     })
 
     await load()
@@ -176,6 +207,14 @@ export default function Ride() {
       <Text style={styles.heading}>
         {ride.status === 'in_progress' ? 'Viagem em andamento' : 'Corrida ativa'}
       </Text>
+
+      <View style={styles.remoteBadge}>
+        <Text style={styles.remoteText}>
+          {remote.taximeter_enabled
+            ? `Taxímetro remoto ativo • atualização ${remote.taximeter_refresh_seconds}s`
+            : 'Taxímetro remoto desativado pelo administrador'}
+        </Text>
+      </View>
 
       <MapView
         style={styles.map}
@@ -265,6 +304,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heading: { color: '#FFD400', fontSize: 26, fontWeight: '900' },
+  remoteBadge: { backgroundColor: '#181818', borderWidth: 1, borderColor: '#FFD400', borderRadius: 12, padding: 10, marginTop: 10 },
+  remoteText: { color: '#FFD400', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   map: { height: 280, borderRadius: 18, marginTop: 12 },
   card: {
     backgroundColor: '#141414',
