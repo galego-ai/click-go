@@ -31,15 +31,18 @@ jobs:
       - name: Prepare preview signing key
         run: |
           base64 -d android-native/motorista/app/preview-debug.keystore.b64 > android-native/motorista/app/preview-debug.keystore
+      - name: Apply driver v0.2 fixes
+        working-directory: android-native/motorista
+        run: python3 apply_login_stability_patch.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v0.1.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v0.2.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v0.1
-          path: apk-output/CLICK-GO-Motorista-native-v0.1.apk
+          name: CLICK-GO-Motorista-native-v0.2
+          path: apk-output/CLICK-GO-Motorista-native-v0.2.apk
           if-no-files-found: error
