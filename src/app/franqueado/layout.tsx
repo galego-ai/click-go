@@ -9,6 +9,7 @@ const items=[
  ['/franqueado/cadastros','Cadastros'],
  ['/franqueado/documentos','Documentos'],
  ['/franqueado/categorias','Categorias'],
+ ['/franqueado/cancelamentos','Cancelamentos'],
  ['/franqueado/operacao','Operação'],
  ['/franqueado/carteiras','Carteiras'],
  ['/franqueado/pagamentos','Pagamentos'],
