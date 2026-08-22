@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.clickgo.preview'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1-preview'
+    }
+
+    flavorDimensions += 'app'
+    productFlavors {
+        passageiro {
+            dimension 'app'
+            applicationId 'com.clickgo.passageiro.preview'
+            manifestPlaceholders = [appName: 'CLICK-GO Passageiro']
+            buildConfigField 'String', 'START_URL', '"https://click-go-ten.vercel.app/passageiro"'
+        }
+        motorista {
+            dimension 'app'
+            applicationId 'com.clickgo.motorista.preview'
+            manifestPlaceholders = [appName: 'CLICK-GO Motorista']
+            buildConfigField 'String', 'START_URL', '"https://click-go-ten.vercel.app/motorista-app"'
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
