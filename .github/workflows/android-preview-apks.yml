@@ -9,6 +9,12 @@ on:
     paths:
       - 'android-preview/**'
       - '.github/workflows/android-preview-apks.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'android-preview/**'
+      - '.github/workflows/android-preview-apks.yml'
 
 permissions:
   contents: read
