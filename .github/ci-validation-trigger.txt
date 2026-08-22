@@ -1,0 +1,1 @@
+Validação temporária do build web após integração do Super Admin.
