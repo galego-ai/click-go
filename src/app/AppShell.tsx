@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import RoleGate from '@/components/RoleGate'
+import AuthAssist from '@/components/AuthAssist'
 
 const primary = [
   ['Dashboard','/dashboard'],
@@ -24,7 +25,8 @@ const groups = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  if (pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname === '/login' || pathname === '/redefinir-senha') return <>{children}</>
+  const assist=<AuthAssist/>
+  if (pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname === '/login' || pathname === '/redefinir-senha') return <>{children}{assist}</>
 
   const isActive = (href:string) => href.split('#')[0] === pathname
 
@@ -49,6 +51,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
       <main className="main">{children}</main>
+      {assist}
     </div>
   </RoleGate>
 }
