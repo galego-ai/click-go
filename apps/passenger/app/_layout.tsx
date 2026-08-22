@@ -14,7 +14,8 @@ export default function RootLayout() {
       <Stack.Screen name="history" options={{title:'Histórico'}} />
       <Stack.Screen name="favorites" options={{title:'Favoritos'}} />
       <Stack.Screen name="schedule" options={{title:'Agendar corrida'}} />
-      <Stack.Screen name="wallet" options={{title:'Pagamentos'}} />
+      <Stack.Screen name="wallet" options={{title:'Formas de pagamento'}} />
+      <Stack.Screen name="profile" options={{title:'Meu cadastro'}} />
       <Stack.Screen name="support" options={{title:'Suporte'}} />
       <Stack.Screen name="safety" options={{title:'Segurança'}} />
     </Stack>
