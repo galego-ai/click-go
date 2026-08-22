@@ -25,3 +25,14 @@ jobs:
         run: npm install
       - name: Build Next.js
         run: npm run build
+      - name: Package validated source
+        uses: actions/upload-artifact@v4
+        with:
+          name: click-go-web-source
+          path: |
+            package.json
+            tsconfig.json
+            next-env.d.ts
+            src
+          if-no-files-found: error
+          retention-days: 1
