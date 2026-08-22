@@ -4,12 +4,12 @@ import Link from 'next/link'
 export const metadata = { title: 'CLICK-GO Super Admin', description: 'Plataforma de mobilidade urbana CLICK-GO' }
 
 const groups = [
-  { title: 'Visão geral', items: [['Dashboard','/dashboard']] },
+  { title: 'Visão geral', items: [['Dashboard','/dashboard'],['Controle Total','/controle']] },
   { title: 'Rede', items: [['Franquias','/franquias'],['Cidades','/cidades'],['Acessos','/acessos']] },
   { title: 'Planos & Tarifas', items: [['Planos','/planos'],['Tarifas','/tarifas']] },
   { title: 'Operação', items: [['Motoristas','/motoristas'],['Passageiros','/passageiros'],['Corridas','/corridas'],['Mapa em tempo real','/mapa'],['Bloqueios','/bloqueios']] },
   { title: 'Financeiro', items: [['Faturamento','/financeiro'],['Pagamentos','/pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
-  { title: 'Marketing', items: [['Cupons','/cupons'],['Promoções','/promocoes']] },
+  { title: 'Marketing', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners']] },
   { title: 'Atendimento', items: [['Suporte','/suporte'],['Auditoria & Logs','/auditoria']] },
 ]
 
