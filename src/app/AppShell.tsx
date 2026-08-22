@@ -17,7 +17,7 @@ const groups = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  if (pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname === '/login') return <>{children}</>
+  if (pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname === '/login' || pathname === '/redefinir-senha') return <>{children}</>
 
   return <RoleGate role="super_admin" loginPath="/login">
     <div className="shell">
