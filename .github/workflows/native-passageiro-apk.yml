@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'android-native/passageiro/**'
+      - 'src/app/api/geocode/**'
       - '.github/workflows/native-passageiro-apk.yml'
   workflow_dispatch:
 
@@ -31,7 +32,7 @@ jobs:
       - name: Prepare preview signing key
         run: |
           base64 -d android-native/passageiro/app/preview-debug.keystore.b64 > android-native/passageiro/app/preview-debug.keystore
-      - name: Apply passenger avatar and local address search
+      - name: Apply passenger v0.6 features
         working-directory: android-native/passageiro
         run: python3 apply_avatar_patch.py
       - name: Build native passenger APK
@@ -40,9 +41,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v0.5.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v0.6.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v0.5
-          path: apk-output/CLICK-GO-Passageiro-native-v0.5.apk
+          name: CLICK-GO-Passageiro-native-v0.6
+          path: apk-output/CLICK-GO-Passageiro-native-v0.6.apk
           if-no-files-found: error
