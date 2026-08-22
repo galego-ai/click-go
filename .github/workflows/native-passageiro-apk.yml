@@ -32,18 +32,20 @@ jobs:
       - name: Prepare preview signing key
         run: |
           base64 -d android-native/passageiro/app/preview-debug.keystore.b64 > android-native/passageiro/app/preview-debug.keystore
-      - name: Apply passenger v0.6 features
+      - name: Apply passenger v0.8 features
         working-directory: android-native/passageiro
-        run: python3 apply_avatar_patch.py
+        run: |
+          python3 apply_avatar_patch.py
+          python3 apply_route_profile_patch.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v0.6.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v0.8.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v0.6
-          path: apk-output/CLICK-GO-Passageiro-native-v0.6.apk
+          name: CLICK-GO-Passageiro-native-v0.8
+          path: apk-output/CLICK-GO-Passageiro-native-v0.8.apk
           if-no-files-found: error
