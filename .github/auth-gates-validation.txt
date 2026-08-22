@@ -1,0 +1,1 @@
+Validação temporária das travas de autenticação do Super Admin e Franqueado.
