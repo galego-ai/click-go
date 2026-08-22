@@ -30,27 +30,32 @@ public final class ApiClient {
     }
 
     private static String request(String urlString, String method, String body, boolean auth, String token, boolean apiKey) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(urlString).openConnection();
-        c.setRequestMethod(method);
-        c.setConnectTimeout(15000);
-        c.setReadTimeout(20000);
-        c.setRequestProperty("Accept", "application/json");
-        c.setRequestProperty("User-Agent", "CLICK-GO-Passageiro-Android/0.1");
-        if (apiKey) c.setRequestProperty("apikey", BuildConfig.SUPABASE_KEY);
-        if (auth && token != null && !token.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + token);
-        if (body != null) {
-            c.setDoOutput(true);
-            c.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            try (OutputStream os = c.getOutputStream()) {
-                os.write(body.getBytes(StandardCharsets.UTF_8));
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(urlString).openConnection();
+            connection.setRequestMethod(method);
+            connection.setConnectTimeout(7000);
+            connection.setReadTimeout(10000);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "CLICK-GO-Passageiro-Android/0.2");
+            if (apiKey) connection.setRequestProperty("apikey", BuildConfig.SUPABASE_KEY);
+            if (auth && token != null && !token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
+            if (body != null) {
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream os = connection.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
             }
+            int code = connection.getResponseCode();
+            InputStream stream = code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream();
+            String text = readAll(stream);
+            if (code < 200 || code >= 300) throw new Exception(extractMessage(text, "Erro HTTP " + code));
+            return text == null ? "" : text;
+        } finally {
+            if (connection != null) connection.disconnect();
         }
-        int code = c.getResponseCode();
-        InputStream is = code >= 200 && code < 300 ? c.getInputStream() : c.getErrorStream();
-        String text = readAll(is);
-        c.disconnect();
-        if (code < 200 || code >= 300) throw new Exception(extractMessage(text, "Erro HTTP " + code));
-        return text == null ? "" : text;
     }
 
     private static String readAll(InputStream is) throws Exception {
@@ -58,7 +63,10 @@ public final class ApiClient {
         StringBuilder sb = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             String line;
-            while ((line = br.readLine()) != null) sb.append(line);
+            while ((line = br.readLine()) != null) {
+                if (Thread.currentThread().isInterrupted()) throw new InterruptedException("Requisição cancelada");
+                sb.append(line);
+            }
         }
         return sb.toString();
     }
