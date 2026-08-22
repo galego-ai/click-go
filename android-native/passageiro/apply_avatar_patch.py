@@ -25,7 +25,15 @@ marker_new = '''        start.setPosition(origin);
 
 search_old = '''                String url = BuildConfig.GEOCODE_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
 '''
-search_new = '''                String url = BuildConfig.GEOCODE_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
+search_new = '''                String searchText = query;
+                if (originLabel != null && originLabel.contains("·")) {
+                    String[] regionParts = originLabel.split("·");
+                    String regionHint = regionParts[regionParts.length - 1].trim();
+                    if (!regionHint.isBlank() && !query.toLowerCase(Locale.ROOT).contains(regionHint.toLowerCase(Locale.ROOT))) {
+                        searchText = query + ", " + regionHint;
+                    }
+                }
+                String url = BuildConfig.GEOCODE_URL + "?q=" + URLEncoder.encode(searchText, StandardCharsets.UTF_8.toString());
                 if (origin != null) {
                     url += "&lat=" + origin.getLatitude() + "&lng=" + origin.getLongitude();
                 }
