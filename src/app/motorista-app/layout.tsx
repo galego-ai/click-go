@@ -10,6 +10,7 @@ export default function DriverAppLayout({children}:{children:React.ReactNode}){
    <Link href="/motorista-app" style={{background:'#ffd400',color:'#000',fontWeight:900,textDecoration:'none',padding:'9px 12px',borderRadius:9,whiteSpace:'nowrap'}}>CLICK-GO Motorista</Link>
    <Link href="/motorista-app" style={{color:pathname==='/motorista-app'?'#ffd400':'#e5e7eb',fontWeight:800,textDecoration:'none',padding:'8px',whiteSpace:'nowrap'}}>Cadastro e documentos</Link>
    <Link href="/motorista-app/operacao" style={{color:pathname.startsWith('/motorista-app/operacao')?'#ffd400':'#e5e7eb',fontWeight:800,textDecoration:'none',padding:'8px',whiteSpace:'nowrap'}}>Operação e corridas</Link>
+   <Link href="/motorista-app/carteira" style={{color:pathname.startsWith('/motorista-app/carteira')?'#ffd400':'#e5e7eb',fontWeight:800,textDecoration:'none',padding:'8px',whiteSpace:'nowrap'}}>Carteira</Link>
   </header>
   {children}
  </div>
