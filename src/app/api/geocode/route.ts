@@ -8,13 +8,7 @@ function parseCoord(value:string|null,min:number,max:number){
   return Number.isFinite(n)&&n>=min&&n<=max?n:null
 }
 
-export async function GET(request:NextRequest){
-  const q=(request.nextUrl.searchParams.get('q')||'').trim()
-  if(q.length<3)return NextResponse.json({error:'Digite pelo menos 3 caracteres.'},{status:400})
-  if(q.length>180)return NextResponse.json({error:'Endereço muito longo.'},{status:400})
-
-  const lat=parseCoord(request.nextUrl.searchParams.get('lat'),-90,90)
-  const lng=parseCoord(request.nextUrl.searchParams.get('lng'),-180,180)
+function buildSearchUrl(q:string,lat:number|null,lng:number|null,bounded:boolean){
   const url=new URL('https://nominatim.openstreetmap.org/search')
   url.searchParams.set('format','jsonv2')
   url.searchParams.set('q',q)
@@ -22,26 +16,71 @@ export async function GET(request:NextRequest){
   url.searchParams.set('limit','7')
   url.searchParams.set('addressdetails','1')
 
-  // Quando o app conhece a origem, usamos uma caixa aproximada de 45 km
-  // apenas como preferência de ranking. bounded=0 permite buscar fora dela
-  // se o passageiro informar um endereço mais distante.
   if(lat!==null&&lng!==null){
-    const latDelta=0.42
-    const lngDelta=0.45
+    // Aproximadamente 30–35 km ao redor do ponto de embarque.
+    const latDelta=0.30
+    const lngDelta=0.32
     url.searchParams.set('viewbox',`${lng-lngDelta},${lat+latDelta},${lng+lngDelta},${lat-latDelta}`)
-    url.searchParams.set('bounded','0')
+    url.searchParams.set('bounded',bounded?'1':'0')
   }
+  return url
+}
+
+async function nominatim(url:URL){
+  const response=await fetch(url,{
+    headers:{
+      'User-Agent':'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
+      'Accept-Language':'pt-BR,pt;q=0.9,en;q=0.5'
+    },
+    cache:'no-store'
+  })
+  if(!response.ok)throw new Error('nominatim_unavailable')
+  return await response.json() as any[]
+}
+
+export async function GET(request:NextRequest){
+  const q=(request.nextUrl.searchParams.get('q')||'').trim()
+  if(q.length<3)return NextResponse.json({error:'Digite pelo menos 3 caracteres.'},{status:400})
+  if(q.length>180)return NextResponse.json({error:'Endereço muito longo.'},{status:400})
+
+  const lat=parseCoord(request.nextUrl.searchParams.get('lat'),-90,90)
+  const lng=parseCoord(request.nextUrl.searchParams.get('lng'),-180,180)
 
   try{
-    const response=await fetch(url,{headers:{'User-Agent':'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)','Accept-Language':'pt-BR,pt;q=0.9,en;q=0.5'},cache:'no-store'})
-    if(!response.ok)return NextResponse.json({error:'Serviço de endereços temporariamente indisponível.'},{status:502})
-    const rows=await response.json() as any[]
+    let rows:any[]=[]
+    let usedLocalSearch=false
+
+    if(lat!==null&&lng!==null){
+      // 1) Primeiro procura SOMENTE na região atual.
+      rows=await nominatim(buildSearchUrl(q,lat,lng,true))
+      usedLocalSearch=rows.length>0
+    }
+
+    // 2) Se nada existir na região, libera busca nacional para não impedir
+    // destinos em outras cidades/estados.
+    if(rows.length===0){
+      rows=await nominatim(buildSearchUrl(q,lat,lng,false))
+    }
+
+    const seen=new Set<string>()
+    const results=rows
+      .map(r=>({label:String(r.display_name||''),lat:Number(r.lat),lng:Number(r.lon)}))
+      .filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lng)&&r.label)
+      .filter(r=>{
+        const key=`${r.label.toLowerCase()}|${r.lat.toFixed(5)}|${r.lng.toFixed(5)}`
+        if(seen.has(key))return false
+        seen.add(key)
+        return true
+      })
+      .slice(0,7)
+
     return NextResponse.json({
-      results:rows.map(r=>({label:String(r.display_name||''),lat:Number(r.lat),lng:Number(r.lon)})).filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lng)),
+      results,
       regionalized:lat!==null&&lng!==null,
+      localResults:usedLocalSearch,
       attribution:'© OpenStreetMap contributors'
     })
   }catch{
-    return NextResponse.json({error:'Não foi possível pesquisar o endereço.'},{status:502})
+    return NextResponse.json({error:'Serviço de endereços temporariamente indisponível.'},{status:502})
   }
 }
