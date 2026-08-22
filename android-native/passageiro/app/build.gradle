@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.clickgo.passageiro'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.clickgo.passageiro'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1-native-preview'
+        buildConfigField 'String', 'SUPABASE_URL', '"https://kyaewidapnggmhbsrqch.supabase.co"'
+        buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_kvZR2g8wzx9MDIhgkRaMfw_wzujQvBt"'
+        buildConfigField 'String', 'GEOCODE_URL', '"https://click-go-ten.vercel.app/api/geocode"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.osmdroid:osmdroid-android:6.1.20'
+}
