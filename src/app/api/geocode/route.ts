@@ -17,7 +17,6 @@ function buildSearchUrl(q:string,lat:number|null,lng:number|null,bounded:boolean
   url.searchParams.set('addressdetails','1')
 
   if(lat!==null&&lng!==null){
-    // Aproximadamente 30–35 km ao redor do ponto de embarque.
     const latDelta=0.30
     const lngDelta=0.32
     url.searchParams.set('viewbox',`${lng-lngDelta},${lat+latDelta},${lng+lngDelta},${lat-latDelta}`)
@@ -43,6 +42,8 @@ export async function GET(request:NextRequest){
   if(q.length<3)return NextResponse.json({error:'Digite pelo menos 3 caracteres.'},{status:400})
   if(q.length>180)return NextResponse.json({error:'Endereço muito longo.'},{status:400})
 
+  const rawContext=(request.nextUrl.searchParams.get('context')||'').trim()
+  const context=rawContext.length<=100?rawContext:''
   const lat=parseCoord(request.nextUrl.searchParams.get('lat'),-90,90)
   const lng=parseCoord(request.nextUrl.searchParams.get('lng'),-180,180)
 
@@ -51,13 +52,20 @@ export async function GET(request:NextRequest){
     let usedLocalSearch=false
 
     if(lat!==null&&lng!==null){
-      // 1) Primeiro procura SOMENTE na região atual.
-      rows=await nominatim(buildSearchUrl(q,lat,lng,true))
+      // Primeiro procura na região atual usando também cidade/UF quando o app informar.
+      const regionalQuery=context?`${q}, ${context}`:q
+      rows=await nominatim(buildSearchUrl(regionalQuery,lat,lng,true))
       usedLocalSearch=rows.length>0
+
+      // Se o contexto textual não encontrar, ainda tenta somente pelo raio.
+      if(rows.length===0&&context){
+        rows=await nominatim(buildSearchUrl(q,lat,lng,true))
+        usedLocalSearch=rows.length>0
+      }
     }
 
-    // 2) Se nada existir na região, libera busca nacional para não impedir
-    // destinos em outras cidades/estados.
+    // Só depois libera busca nacional, mantendo o texto original para permitir
+    // que o passageiro pesquise um destino em outra cidade.
     if(rows.length===0){
       rows=await nominatim(buildSearchUrl(q,lat,lng,false))
     }
@@ -78,6 +86,7 @@ export async function GET(request:NextRequest){
       results,
       regionalized:lat!==null&&lng!==null,
       localResults:usedLocalSearch,
+      contextApplied:Boolean(context),
       attribution:'© OpenStreetMap contributors'
     })
   }catch{
