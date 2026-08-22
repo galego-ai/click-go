@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
+    "leaflet": "latest",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@types/leaflet": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
