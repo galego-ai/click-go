@@ -250,3 +250,4 @@ for old,new in [
 
 path.write_text(text, encoding='utf-8')
 print('Passageiro v0.6: avatar, cidade/UF e busca de comércios/locais aplicados.')
+exec(Path('apply_menu_patch.py').read_text(encoding='utf-8'))
