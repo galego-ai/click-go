@@ -1,0 +1,1 @@
+Validação temporária do mapa, geolocalização, cálculo e solicitação de corrida do passageiro.
