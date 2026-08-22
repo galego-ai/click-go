@@ -10,8 +10,8 @@ android {
         applicationId 'com.clickgo.passageiro.beta'
         minSdk 24
         targetSdk 35
-        versionCode 2
-        versionName '0.2-native-beta'
+        versionCode 3
+        versionName '0.3-native-beta'
         buildConfigField 'String', 'SUPABASE_URL', '"https://kyaewidapnggmhbsrqch.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_kvZR2g8wzx9MDIhgkRaMfw_wzujQvBt"'
         buildConfigField 'String', 'GEOCODE_URL', '"https://click-go-ten.vercel.app/api/geocode"'
