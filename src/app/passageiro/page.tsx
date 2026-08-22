@@ -1,65 +1,101 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const menu = ['Início', 'Solicitar corrida', 'Histórico de corridas', 'Formas de pagamento', 'Cupons', 'Endereços favoritos', 'Ajuda e suporte', 'Meu perfil']
+const box:React.CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:18}
+const input:React.CSSProperties={width:'100%',background:'#0d0d0d',color:'#fff',border:'1px solid #333',borderRadius:10,padding:'11px 12px'}
+const btn:React.CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'11px 14px',fontWeight:800,cursor:'pointer'}
+
+type Profile={id:string;full_name:string|null;phone:string|null;email:string|null;role:string}
+type Ride={id:string;status:string;origin_label:string;destination_label:string;estimated_fare:number|string|null;final_fare:number|string|null;requested_at:string}
+type PaymentMethod={id:string;method_type:string;provider:string|null;brand:string|null;last4:string|null;is_default:boolean;active:boolean}
+type Ticket={id:string;subject:string;category:string|null;status:string;priority:string;description:string;created_at:string}
+const money=(v:any)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})
 
 export default function PassengerPage() {
   const [active, setActive] = useState('Início')
+  const [authMode,setAuthMode]=useState<'login'|'register'>('login')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [profile,setProfile]=useState<Profile|null>(null)
+  const [rides,setRides]=useState<Ride[]>([])
+  const [methods,setMethods]=useState<PaymentMethod[]>([])
+  const [tickets,setTickets]=useState<Ticket[]>([])
 
-  async function register(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
-    const data = new FormData(e.currentTarget)
-    const email = String(data.get('email') || '').trim()
-    const password = String(data.get('password') || '')
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          app_role: 'passenger',
-          full_name: String(data.get('full_name') || '').trim(),
-          phone: String(data.get('phone') || '').trim(),
-          cpf: String(data.get('cpf') || '').trim(),
-        },
-      },
-    })
-    setLoading(false)
-    setMessage(error ? error.message : 'Cadastro realizado. Confira seu e-mail para confirmar a conta.')
+  useEffect(()=>{restore();const{data:l}=supabase.auth.onAuthStateChange((_e,s)=>{if(!s){setProfile(null);setRides([]);setMethods([]);setTickets([])}});return()=>l.subscription.unsubscribe()},[])
+
+  async function restore(){const{data:{user}}=await supabase.auth.getUser();if(user)await loadPassenger(user.id)}
+
+  async function loadPassenger(id?:string){
+    setLoading(true);setMessage('')
+    try{
+      const uid=id||(await supabase.auth.getUser()).data.user?.id;if(!uid)return
+      const {data:p,error:pe}=await supabase.from('profiles').select('id,full_name,phone,email,role').eq('id',uid).single();if(pe)throw pe
+      if(!p||p.role!=='passenger'){await supabase.auth.signOut();throw new Error('Esta conta não é de passageiro.')}
+      const[{data:r,error:re},{data:m,error:me},{data:t,error:te}]=await Promise.all([
+        supabase.from('rides').select('id,status,origin_label,destination_label,estimated_fare,final_fare,requested_at').eq('passenger_id',uid).order('requested_at',{ascending:false}).limit(100),
+        supabase.from('passenger_payment_methods').select('id,method_type,provider,brand,last4,is_default,active').eq('passenger_id',uid).eq('active',true).order('created_at',{ascending:false}),
+        supabase.from('support_tickets').select('id,subject,category,status,priority,description,created_at').eq('requester_id',uid).order('created_at',{ascending:false}).limit(50)
+      ])
+      if(re)throw re;if(me)throw me;if(te)throw te
+      setProfile(p as Profile);setRides((r||[]) as Ride[]);setMethods((m||[]) as PaymentMethod[]);setTickets((t||[]) as Ticket[])
+    }catch(e:any){setMessage(e.message||'Erro ao carregar sua conta.')}
+    finally{setLoading(false)}
   }
 
-  return <>
-    <div className="topbar"><div><div className="eyebrow">App Passageiro</div><h1 className="title">CLICK-GO Passageiro</h1><p className="subtitle">Cadastro livre, sem obrigar o passageiro a escolher cidade.</p></div></div>
+  async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();setLoading(true);setMessage('Entrando...');const f=new FormData(e.currentTarget);const{data,error}=await supabase.auth.signInWithPassword({email:String(f.get('email')||'').trim(),password:String(f.get('password')||'')});if(error){setMessage(error.message);setLoading(false);return}await loadPassenger(data.user.id)}
+
+  async function register(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();setLoading(true);setMessage('')
+    const data = new FormData(e.currentTarget)
+    const {data:auth,error} = await supabase.auth.signUp({email:String(data.get('email')||'').trim(),password:String(data.get('password')||''),options:{data:{app_role:'passenger',full_name:String(data.get('full_name')||'').trim(),phone:String(data.get('phone')||'').trim(),cpf:String(data.get('cpf')||'').trim()}}})
+    setLoading(false)
+    if(error){setMessage(error.message);return}
+    if(auth.session){await loadPassenger(auth.user?.id);setMessage('Conta criada com sucesso.')}
+    else setMessage('Cadastro realizado. Confira seu e-mail para confirmar a conta e depois faça login.')
+  }
+
+  async function addPayment(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();if(!profile)return;setLoading(true);setMessage('')
+    const f=new FormData(e.currentTarget);const type=String(f.get('method_type')||'cash')
+    const existing=methods.find(m=>m.method_type===type&&m.active)
+    if(existing){setMessage('Essa forma de pagamento já está cadastrada.');setLoading(false);return}
+    if(!methods.length){}else await supabase.from('passenger_payment_methods').update({is_default:false}).eq('passenger_id',profile.id)
+    const{error}=await supabase.from('passenger_payment_methods').insert({passenger_id:profile.id,method_type:type,provider:type==='pix'?'pix':null,is_default:true,active:true})
+    setMessage(error?error.message:'Forma de pagamento adicionada.');if(!error)await loadPassenger(profile.id);setLoading(false)
+  }
+
+  async function setDefaultMethod(id:string){if(!profile)return;setLoading(true);await supabase.from('passenger_payment_methods').update({is_default:false}).eq('passenger_id',profile.id);const{error}=await supabase.from('passenger_payment_methods').update({is_default:true}).eq('id',id);setMessage(error?error.message:'Forma de pagamento principal atualizada.');if(!error)await loadPassenger(profile.id);setLoading(false)}
+
+  async function removeMethod(id:string){const{error}=await supabase.from('passenger_payment_methods').update({active:false,is_default:false}).eq('id',id);setMessage(error?error.message:'Forma de pagamento removida.');if(!error&&profile)await loadPassenger(profile.id)}
+
+  async function openTicket(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();if(!profile)return;setLoading(true);setMessage('')
+    const f=new FormData(e.currentTarget);const{error}=await supabase.from('support_tickets').insert({requester_id:profile.id,subject:String(f.get('subject')||'').trim(),category:String(f.get('category')||'geral'),description:String(f.get('description')||'').trim(),priority:'normal',status:'open'})
+    setMessage(error?error.message:'Chamado aberto com sucesso.');if(!error){e.currentTarget.reset();await loadPassenger(profile.id)}setLoading(false)
+  }
+
+  async function logout(){await supabase.auth.signOut();setActive('Início');setAuthMode('login');setMessage('Sessão encerrada.')}
+
+  if(!profile)return <main style={{minHeight:'100vh',background:'#080808',color:'#f8fafc',padding:24}}><div style={{maxWidth:700,margin:'0 auto'}}><div className="eyebrow">App Passageiro</div><h1 className="title">CLICK-GO Passageiro</h1><p className="subtitle">Cadastro livre: você não precisa escolher cidade para criar sua conta.</p><div style={{display:'flex',gap:8,margin:'22px 0 14px'}}><button style={{...btn,background:authMode==='login'?'#ffd400':'#222',color:authMode==='login'?'#000':'#fff'}} onClick={()=>setAuthMode('login')}>Entrar</button><button style={{...btn,background:authMode==='register'?'#ffd400':'#222',color:authMode==='register'?'#000':'#fff'}} onClick={()=>setAuthMode('register')}>Criar conta</button></div><section style={box}>{authMode==='login'?<form onSubmit={login} style={{display:'grid',gap:12}}><h2 style={{marginTop:0}}>Entrar como passageiro</h2><input name="email" required type="email" placeholder="E-mail" style={input}/><input name="password" required type="password" placeholder="Senha" style={input}/><button style={btn} disabled={loading}>{loading?'Entrando...':'Entrar'}</button></form>:<form onSubmit={register} style={{display:'grid',gap:12}}><h2 style={{marginTop:0}}>Criar conta de passageiro</h2><p className="subtitle">A cidade será identificada somente quando você solicitar uma corrida.</p><input name="full_name" required placeholder="Nome completo" style={input}/><input name="phone" required placeholder="Telefone / WhatsApp" style={input}/><input name="cpf" placeholder="CPF" style={input}/><input name="email" required type="email" placeholder="E-mail" style={input}/><input name="password" required type="password" minLength={6} placeholder="Senha (mínimo 6 caracteres)" style={input}/><button style={btn} disabled={loading}>{loading?'Cadastrando...':'Criar conta de passageiro'}</button></form>}{message&&<p style={{marginTop:14,color:'#ffe66b'}}>{message}</p>}</section></div></main>
+
+  return <main style={{minHeight:'100vh',background:'#080808',color:'#f8fafc',padding:20}}>
+    <div className="topbar"><div><div className="eyebrow">App Passageiro</div><h1 className="title">CLICK-GO Passageiro</h1><p className="subtitle">{profile.full_name||profile.email}</p></div><button style={{...btn,background:'#222',color:'#fff'}} onClick={logout}>Sair</button></div>
     <div style={{display:'grid',gridTemplateColumns:'230px 1fr',gap:16,alignItems:'start'}}>
-      <aside className="card" style={{padding:10}}>
-        {menu.map(item => <button key={item} onClick={() => setActive(item)} style={{display:'block',width:'100%',textAlign:'left',padding:'12px',marginBottom:6,border:0,borderRadius:10,cursor:'pointer',fontWeight:700,background:active===item?'#ffd400':'#1d1d1d',color:active===item?'#000':'#fff'}}>{item}</button>)}
-      </aside>
-      <section className="card">
-        <div className="eyebrow">{active}</div>
-        {active === 'Início' ? <>
-          <h2>Cadastre-se para pedir corridas</h2>
-          <p className="subtitle" style={{marginBottom:18}}>A cidade será identificada somente quando o passageiro solicitar uma corrida. O cadastro não fica preso a nenhuma franquia.</p>
-          <form onSubmit={register} style={{display:'grid',gap:12,maxWidth:560}}>
-            <input name="full_name" required placeholder="Nome completo" className="form-input" />
-            <input name="phone" required placeholder="Telefone / WhatsApp" className="form-input" />
-            <input name="cpf" placeholder="CPF" className="form-input" />
-            <input name="email" required type="email" placeholder="E-mail" className="form-input" />
-            <input name="password" required type="password" minLength={6} placeholder="Senha" className="form-input" />
-            <button className="button" disabled={loading}>{loading ? 'Cadastrando...' : 'Criar conta de passageiro'}</button>
-          </form>
-          {message && <p style={{marginTop:14}}>{message}</p>}
-        </> : <>
-          <h2>{active}</h2>
-          <p className="subtitle">Esta área já está reservada no menu do passageiro e será ligada aos dados reais da conta e das corridas.</p>
-          {active === 'Histórico de corridas' && <table className="table" style={{marginTop:16}}><thead><tr><th>Data</th><th>Origem</th><th>Destino</th><th>Valor</th></tr></thead><tbody><tr><td colSpan={4} className="empty">Nenhuma corrida encontrada.</td></tr></tbody></table>}
-          {active === 'Formas de pagamento' && <div className="card" style={{marginTop:16}}><strong>PIX, cartão e dinheiro</strong><p className="subtitle">O passageiro poderá escolher e gerenciar suas formas de pagamento.</p></div>}
-        </>}
+      <aside style={{...box,padding:10}}>{menu.map(item=><button key={item} onClick={()=>setActive(item)} style={{display:'block',width:'100%',textAlign:'left',padding:'12px',marginBottom:6,border:0,borderRadius:10,cursor:'pointer',fontWeight:700,background:active===item?'#ffd400':'#1d1d1d',color:active===item?'#000':'#fff'}}>{item}</button>)}</aside>
+      <section style={box}><div className="eyebrow">{active}</div>
+        {active==='Início'&&<><h2>Olá, {profile.full_name?.split(' ')[0]||'passageiro'}!</h2><p className="subtitle">Sua conta é livre e não fica vinculada a nenhuma cidade. A franquia será definida pela localização de cada corrida.</p><div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,marginTop:18}}><div style={box}><div className="label">Corridas</div><div className="metric">{rides.length}</div></div><div style={box}><div className="label">Pagamentos</div><div className="metric">{methods.length}</div></div><div style={box}><div className="label">Chamados</div><div className="metric">{tickets.filter(t=>t.status!=='closed').length}</div></div></div></>}
+        {active==='Solicitar corrida'&&<><h2>Solicitar corrida</h2><p className="subtitle">A próxima etapa é conectar o mapa e a geolocalização para identificar automaticamente a cidade, calcular distância, tempo, tarifa e encontrar motoristas próximos.</p><div style={{...box,marginTop:16}}><b>Fluxo preparado</b><p className="subtitle">Origem → Destino → categoria → estimativa → pagamento → procurar motorista.</p></div></>}
+        {active==='Histórico de corridas'&&<><h2>Histórico de corridas</h2><div className="table-wrap" style={{marginTop:16}}><table className="table"><thead><tr><th>Data</th><th>Origem</th><th>Destino</th><th>Status</th><th>Valor</th></tr></thead><tbody>{rides.map(r=><tr key={r.id}><td>{new Date(r.requested_at).toLocaleString('pt-BR')}</td><td>{r.origin_label}</td><td>{r.destination_label}</td><td>{r.status}</td><td>{money(r.final_fare??r.estimated_fare)}</td></tr>)}{!rides.length&&<tr><td colSpan={5} className="empty">Nenhuma corrida encontrada.</td></tr>}</tbody></table></div></>}
+        {active==='Formas de pagamento'&&<><h2>Formas de pagamento</h2><p className="subtitle">Dinheiro e PIX podem ser cadastrados agora. Cartões serão tokenizados pelo gateway de pagamento; o CLICK-GO não armazenará número completo nem CVV.</p><form onSubmit={addPayment} style={{display:'flex',gap:10,margin:'16px 0'}}><select name="method_type" style={{...input,maxWidth:260}}><option value="cash">Dinheiro</option><option value="pix">PIX</option></select><button style={btn} disabled={loading}>Adicionar</button></form><div style={{display:'grid',gap:10}}>{methods.map(m=><div key={m.id} style={{...box,display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><div><b>{m.method_type==='cash'?'Dinheiro':m.method_type==='pix'?'PIX':`${m.brand||'Cartão'} •••• ${m.last4||''}`}</b><div style={{fontSize:12,color:'#9ca3af'}}>{m.is_default?'Forma principal':''}</div></div><div style={{display:'flex',gap:7}}>{!m.is_default&&<button style={{...btn,background:'#222',color:'#fff'}} onClick={()=>setDefaultMethod(m.id)}>Definir principal</button>}<button style={{...btn,background:'#3a1b1b',color:'#fff'}} onClick={()=>removeMethod(m.id)}>Remover</button></div></div>)}{!methods.length&&<div style={box}>Nenhuma forma de pagamento cadastrada.</div>}</div></>}
+        {active==='Ajuda e suporte'&&<><h2>Ajuda e suporte</h2><form onSubmit={openTicket} style={{display:'grid',gap:10,maxWidth:650,marginTop:16}}><input name="subject" required placeholder="Assunto" style={input}/><select name="category" style={input}><option value="geral">Geral</option><option value="corrida">Corrida</option><option value="pagamento">Pagamento</option><option value="seguranca">Segurança</option><option value="cadastro">Cadastro</option></select><textarea name="description" required placeholder="Descreva como podemos ajudar" rows={5} style={input}/><button style={btn} disabled={loading}>Abrir chamado</button></form><div style={{display:'grid',gap:10,marginTop:18}}>{tickets.map(t=><div key={t.id} style={box}><div style={{display:'flex',justifyContent:'space-between',gap:10}}><b>{t.subject}</b><span>{t.status}</span></div><div style={{color:'#9ca3af',fontSize:12,marginTop:6}}>{new Date(t.created_at).toLocaleString('pt-BR')} · {t.category||'geral'}</div><p style={{marginBottom:0}}>{t.description}</p></div>)}{!tickets.length&&<div style={box}>Nenhum chamado aberto.</div>}</div></>}
+        {active==='Meu perfil'&&<><h2>Meu perfil</h2><div style={box}><b>{profile.full_name||'Passageiro'}</b><div style={{color:'#9ca3af',marginTop:8}}>{profile.email}<br/>{profile.phone}</div><p className="subtitle" style={{marginBottom:0,marginTop:12}}>Conta global CLICK-GO — sem cidade fixa.</p></div></>}
+        {active==='Cupons'&&<><h2>Cupons</h2><p className="subtitle">Os cupons serão filtrados pela cidade da corrida, além de campanhas nacionais da matriz.</p></>}
+        {active==='Endereços favoritos'&&<><h2>Endereços favoritos</h2><p className="subtitle">Casa, trabalho e outros endereços serão adicionados quando o mapa/geocodificação estiver conectado.</p></>}
+        {message&&<p style={{marginTop:14,color:'#ffe66b'}}>{message}</p>}
       </section>
     </div>
-  </>
+  </main>
 }
