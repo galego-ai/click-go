@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import AddressSearch from '@/components/AddressSearch'
 import 'leaflet/dist/leaflet.css'
 
 type Point={lat:number;lng:number}
 type PaymentMethod={id:string;method_type:string;brand:string|null;last4:string|null;is_default:boolean}
 type RideOption={city_id:string;franchise_id:string;city_name:string;state:string;category_id:string|null;category_name:string|null;required_vehicle_type:string|null;distance_km:number|string;duration_min:number|string;fare:number|string|null;multiplier:number|string|null}
 type Ride={id:string;status:string;driver_id:string|null;estimated_fare:number|string|null;final_fare:number|string|null;origin_label:string;destination_label:string;estimated_arrival_min:number|null;cancellation_fee_applied:boolean;cancellation_fee_amount:number|string}
+type SearchResult={label:string;lat:number;lng:number}
 
 const box:React.CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:16}
 const input:React.CSSProperties={width:'100%',background:'#0d0d0d',color:'#fff',border:'1px solid #333',borderRadius:10,padding:'11px 12px'}
@@ -44,6 +46,7 @@ export default function PassengerRideRequest({methods,onRideCreated}:{methods:Pa
      if(destination)L.circleMarker([destination.lat,destination.lng],{radius:8}).bindTooltip('Destino').addTo(layerRef.current)
      if(origin&&destination){L.polyline([[origin.lat,origin.lng],[destination.lat,destination.lng]]).addTo(layerRef.current);mapRef.current.fitBounds([[origin.lat,origin.lng],[destination.lat,destination.lng]],{padding:[35,35]})}
      else if(origin)mapRef.current.setView([origin.lat,origin.lng],15)
+     else if(destination)mapRef.current.setView([destination.lat,destination.lng],15)
    })()
    return()=>{alive=false}
  },[origin,destination])
@@ -63,11 +66,14 @@ export default function PassengerRideRequest({methods,onRideCreated}:{methods:Pa
    setMsg('')
    if(!navigator.geolocation){setMsg('Este navegador não disponibiliza geolocalização. Clique no mapa para marcar a origem.');return}
    setBusy(true)
-   navigator.geolocation.getCurrentPosition(pos=>{const p={lat:pos.coords.latitude,lng:pos.coords.longitude};setOrigin(p);setOriginLabel('Minha localização atual');setBusy(false)},err=>{setMsg(err.code===1?'Permissão de localização negada. Você pode marcar a origem clicando no mapa.':'Não foi possível obter sua localização. Marque a origem no mapa.');setBusy(false)},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})
+   navigator.geolocation.getCurrentPosition(pos=>{const p={lat:pos.coords.latitude,lng:pos.coords.longitude};setOrigin(p);setOriginLabel('Minha localização atual');setOptions([]);setSelected('');setBusy(false)},err=>{setMsg(err.code===1?'Permissão de localização negada. Você pode pesquisar ou marcar a origem no mapa.':'Não foi possível obter sua localização. Pesquise ou marque a origem no mapa.');setBusy(false)},{enableHighAccuracy:true,timeout:12000,maximumAge:30000})
  }
 
+ function chooseOrigin(r:SearchResult){setOrigin({lat:r.lat,lng:r.lng});setOriginLabel(r.label);setOptions([]);setSelected('');setMsg('Origem encontrada. Agora escolha o destino.')}
+ function chooseDestination(r:SearchResult){setDestination({lat:r.lat,lng:r.lng});setDestinationLabel(r.label);setOptions([]);setSelected('');setMsg('Destino encontrado. Agora calcule as opções da corrida.')}
+
  async function calculate(){
-   if(!origin||!destination){setMsg('Defina a origem e o destino no mapa.');return}
+   if(!origin||!destination){setMsg('Defina a origem e o destino.');return}
    setBusy(true);setMsg('Calculando cidade, distância, tempo e tarifas...');setOptions([]);setSelected('')
    const{data,error}=await supabase.rpc('get_passenger_ride_options',{p_origin_lat:origin.lat,p_origin_lng:origin.lng,p_destination_lat:destination.lat,p_destination_lng:destination.lng})
    setBusy(false)
@@ -101,15 +107,16 @@ export default function PassengerRideRequest({methods,onRideCreated}:{methods:Pa
    const{data:r}=await supabase.from('rides').select('id,status,driver_id,estimated_fare,final_fare,origin_label,destination_label,estimated_arrival_min,cancellation_fee_applied,cancellation_fee_amount').eq('id',currentRide.id).single();if(r)setCurrentRide(r as Ride);onRideCreated?.()
  }
 
- function resetRoute(){setDestination(null);setOptions([]);setSelected('');setCurrentRide(null);setMsg('Clique no mapa para escolher um novo destino.')}
+ function resetRoute(){setDestination(null);setDestinationLabel('Destino selecionado no mapa');setOptions([]);setSelected('');setCurrentRide(null);setMsg('Pesquise ou clique no mapa para escolher um novo destino.')}
  const validOptions=options.filter(o=>o.category_id)
  const selectedOption=validOptions.find(o=>o.category_id===selected)
 
  return <div style={{display:'grid',gap:14}}>
-  <div><h2 style={{marginBottom:6}}>Solicitar corrida</h2><p className="subtitle">Use sua localização ou clique no mapa para marcar a origem. Depois clique novamente para marcar o destino.</p></div>
+  <div><h2 style={{marginBottom:6}}>Solicitar corrida</h2><p className="subtitle">Pesquise origem e destino, use sua localização ou marque os pontos diretamente no mapa.</p></div>
+  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><div style={box}><AddressSearch title="Pesquisar origem" placeholder="Rua, número, bairro, cidade..." onSelect={chooseOrigin}/></div><div style={box}><AddressSearch title="Pesquisar destino" placeholder="Para onde você vai?" onSelect={chooseDestination}/></div></div>
   <div style={{...box,padding:10}}><div ref={mapEl} style={{height:400,borderRadius:14,overflow:'hidden'}}/></div>
-  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button style={btn} onClick={useMyLocation} disabled={busy}>📍 Usar minha localização</button><button style={{...btn,background:'#222',color:'#fff'}} onClick={()=>{setOrigin(null);setDestination(null);setOptions([]);setCurrentRide(null);setMsg('Clique no mapa para marcar a origem e depois o destino.')}}>Marcar tudo no mapa</button><button style={{...btn,background:'#222',color:'#fff'}} onClick={resetRoute}>Novo destino</button></div>
-  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><label style={{display:'grid',gap:6}}>Origem<input style={input} value={originLabel} onChange={e=>setOriginLabel(e.target.value)}/></label><label style={{display:'grid',gap:6}}>Destino<input style={input} value={destinationLabel} onChange={e=>setDestinationLabel(e.target.value)}/></label></div>
+  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button style={btn} onClick={useMyLocation} disabled={busy}>📍 Usar minha localização</button><button style={{...btn,background:'#222',color:'#fff'}} onClick={()=>{setOrigin(null);setDestination(null);setOriginLabel('Origem selecionada no mapa');setDestinationLabel('Destino selecionado no mapa');setOptions([]);setCurrentRide(null);setMsg('Clique no mapa para marcar a origem e depois o destino.')}}>Marcar tudo no mapa</button><button style={{...btn,background:'#222',color:'#fff'}} onClick={resetRoute}>Novo destino</button></div>
+  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><label style={{display:'grid',gap:6}}>Origem selecionada<input style={input} value={originLabel} onChange={e=>setOriginLabel(e.target.value)}/></label><label style={{display:'grid',gap:6}}>Destino selecionado<input style={input} value={destinationLabel} onChange={e=>setDestinationLabel(e.target.value)}/></label></div>
   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><div style={box}><b>Origem</b><div style={{color:'#9ca3af',marginTop:6}}>{origin?`${origin.lat.toFixed(5)}, ${origin.lng.toFixed(5)}`:'Ainda não definida'}</div></div><div style={box}><b>Destino</b><div style={{color:'#9ca3af',marginTop:6}}>{destination?`${destination.lat.toFixed(5)}, ${destination.lng.toFixed(5)}`:'Ainda não definido'}</div></div></div>
   {!currentRide&&<button style={btn} onClick={calculate} disabled={busy||!origin||!destination}>{busy?'Processando...':'Calcular opções da corrida'}</button>}
   {options[0]&&<div style={box}><b>{options[0].city_name}/{options[0].state}</b><div style={{color:'#9ca3af',marginTop:6}}>Distância estimada: {Number(options[0].distance_km).toFixed(1)} km · Tempo estimado: {Math.ceil(Number(options[0].duration_min))} min</div></div>}
