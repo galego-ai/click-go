@@ -2,3 +2,4 @@
 > click-go-passenger@0.1.0 typecheck
 > tsc --noEmit
 
+components/PassengerSideMenu.tsx(35,63): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
