@@ -8,6 +8,7 @@ export default function RootLayout() {
     <Stack screenOptions={{headerStyle:{backgroundColor:colors.black},headerTintColor:colors.white,contentStyle:{backgroundColor:colors.black}}}>
       <Stack.Screen name="index" options={{headerShown:false}} />
       <Stack.Screen name="login" options={{title:'Entrar'}} />
+      <Stack.Screen name="register" options={{title:'Cadastro'}} />
       <Stack.Screen name="home" options={{headerShown:false}} />
       <Stack.Screen name="ride" options={{title:'Sua corrida'}} />
       <Stack.Screen name="history" options={{title:'Histórico'}} />
