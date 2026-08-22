@@ -16,6 +16,7 @@
     "react-native-url-polyfill": "latest",
     "expo": "~57.0.9",
     "expo-constants": "~57.0.8",
+    "expo-image-picker": "57.0.12",
     "expo-linking": "~57.0.4",
     "expo-location": "~57.0.7",
     "expo-router": "~57.0.9",
