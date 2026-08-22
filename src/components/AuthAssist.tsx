@@ -30,20 +30,27 @@ export default function AuthAssist(){
   return()=>observer.disconnect()
  },[show,pathname])
 
+ function recoveryDestination(){
+  if(pathname==='/passageiro')return 'passageiro-web'
+  if(pathname==='/motorista-app')return 'motorista-web'
+  if(pathname==='/franqueado/login')return 'franqueado'
+  return 'login'
+ }
+
  async function recover(){
   const email=Array.from(document.querySelectorAll<HTMLInputElement>('input[type="email"]')).find(el=>el.offsetParent!==null)?.value?.trim()||''
   if(!email){setMsg('Digite primeiro o e-mail da sua conta.');return}
   setBusy(true);setMsg('Enviando recuperação...')
-  const redirectTo=`${window.location.origin}/redefinir-senha`
+  const redirectTo=`${window.location.origin}/redefinir-senha?destino=${encodeURIComponent(recoveryDestination())}`
   const{error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo})
   setBusy(false)
-  setMsg(error?error.message:'E-mail de recuperação enviado. Use somente o link mais recente recebido.')
+  setMsg(error?error.message:'E-mail de recuperação CLICK-GO enviado. Depois de criar a nova senha, você voltará ao acesso correto.')
  }
 
  if(!hasPassword)return null
  return <div style={{position:'fixed',right:16,bottom:16,zIndex:5000,display:'grid',gap:7,maxWidth:330}}>
   {msg&&<div style={{background:'#111',color:'#ffe66b',border:'1px solid #665600',borderRadius:10,padding:'9px 11px',fontSize:12}}>{msg}</div>}
   <button type="button" onClick={()=>setShow(v=>!v)} style={{...button,background:'#222',color:'#fff'}}>{show?'🙈 Ocultar senha':'👁 Ver senha'}</button>
-  {canRecover&&<button type="button" disabled={busy} onClick={recover} style={{...button,background:'#ffd400',color:'#000'}}>{busy?'Enviando...':'Esqueci minha senha'}</button>}
+  {canRecover&&<button type="button" disabled={busy} onClick={recover} style={{...button,background:'#ffd400',color:'#000'}}>{busy?'Enviando...':'Esqueci minha senha?'}</button>}
  </div>
 }
