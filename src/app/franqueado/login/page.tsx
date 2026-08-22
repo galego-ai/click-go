@@ -28,10 +28,10 @@ export default function FranchiseLoginPage(){
  async function recover(){
   if(!email.trim()){setMsg('Digite primeiro o e-mail da sua conta.');return}
   setBusy(true);setMsg('Enviando recuperação...')
-  const redirectTo=`${window.location.origin}/redefinir-senha`
+  const redirectTo=`${window.location.origin}/redefinir-senha?destino=franqueado`
   const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo})
   setBusy(false)
-  setMsg(error?error.message:'Link de recuperação enviado. Abra o e-mail recebido para criar uma nova senha.')
+  setMsg(error?error.message:'Link de recuperação CLICK-GO enviado. Depois de criar a nova senha, você voltará ao login do Franqueado.')
  }
 
  const eye:React.CSSProperties={width:46,border:'1px solid #333',borderRadius:10,background:'#181818',color:'#fff',cursor:'pointer',fontSize:17}
