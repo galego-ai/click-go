@@ -20,7 +20,7 @@ android {
         preview {
             storeFile file('preview-debug.keystore')
             storePassword 'clickgo-preview'
-            keyAlias 'clickgo-preview'
+            keyAlias 'clickgo-driver-preview'
             keyPassword 'clickgo-preview'
         }
     }
