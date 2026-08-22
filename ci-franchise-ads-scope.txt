@@ -1,0 +1,1 @@
+Validação temporária do build de anúncios isolados por franquia.
