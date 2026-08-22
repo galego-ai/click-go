@@ -6,7 +6,7 @@ export const metadata = { title: 'CLICK-GO Super Admin', description: 'Plataform
 const groups = [
   { title: 'Visão geral', items: [['Dashboard','/dashboard'],['Controle Total','/controle']] },
   { title: 'Rede', items: [['Franquias','/franquias'],['Cidades','/cidades'],['Acessos','/acessos']] },
-  { title: 'Planos & Tarifas', items: [['Planos','/planos'],['Tarifas','/tarifas']] },
+  { title: 'Planos & Tarifas', items: [['Planos','/planos'],['Tarifas & Categorias','/tarifas'],['Regiões & Áreas','/regioes']] },
   { title: 'Operação', items: [['Motoristas','/motoristas'],['Relatório por Motorista','/relatorios-motoristas'],['Passageiros','/passageiros'],['Corridas','/corridas'],['Mapa em tempo real','/mapa'],['Bloqueios','/bloqueios']] },
   { title: 'Financeiro', items: [['Faturamento','/financeiro'],['Pagamentos','/pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
   { title: 'Marketing', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners']] },
