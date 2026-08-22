@@ -9,7 +9,7 @@ const groups = [
   { title: 'Rede', items: [['Franquias','/franquias'],['Cidades','/cidades'],['Acessos','/acessos']] },
   { title: 'Planos & Tarifas', items: [['Planos','/planos'],['Tarifas & Categorias','/tarifas'],['Regiões & Áreas','/regioes']] },
   { title: 'Operação', items: [['Motoristas','/motoristas'],['Relatório por Motorista','/relatorios-motoristas'],['Passageiros','/passageiros'],['Corridas','/corridas'],['Mapa em tempo real','/mapa'],['Bloqueios','/bloqueios']] },
-  { title: 'Financeiro', items: [['Faturamento','/financeiro'],['Pagamentos','/pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
+  { title: 'Financeiro', items: [['Faturamento','/financeiro'],['Pagamentos','/pagamentos'],['Pagamentos & Carteira','/configuracoes-pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
   { title: 'Marketing', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners']] },
   { title: 'Atendimento', items: [['Suporte','/suporte'],['Auditoria & Logs','/auditoria']] },
   { title: 'Aplicativos', items: [['App Passageiro','/passageiro'],['App Motorista','/motorista-app'],['Painel Franqueado','/franqueado']] },
