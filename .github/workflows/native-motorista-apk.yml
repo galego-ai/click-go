@@ -48,15 +48,16 @@ jobs:
           python3 apply_prime_driver_patch.py
           python3 apply_document_upload_patch.py
           python3 apply_driver_doc_rpc_patch.py
+          python3 apply_vehicle_type_validation_patch.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v1.0-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v1.1-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v1.0-prime
-          path: apk-output/CLICK-GO-Motorista-native-v1.0-prime.apk
+          name: CLICK-GO-Motorista-native-v1.1-prime
+          path: apk-output/CLICK-GO-Motorista-native-v1.1-prime.apk
           if-no-files-found: error
