@@ -48,7 +48,7 @@ replacement=r'''    private void renderActiveDriver(JSONObject loc) {
         activeDriverRouteLastAt=now;
         double fromLat=loc.optDouble("lat",Double.NaN),fromLng=loc.optDouble("lng",Double.NaN);
         if(!Double.isFinite(fromLat)||!Double.isFinite(fromLng))return;
-        Location target="in_progress".equals(activeRideStatus)?destination:origin;
+        GeoPoint target="in_progress".equals(activeRideStatus)?destination:origin;
         double toLat=target.getLatitude(),toLng=target.getLongitude();
         final MapView targetMap=map;final int seq=++activeDriverRouteSeq;
         io.execute(()->{
