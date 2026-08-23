@@ -58,7 +58,7 @@ jobs:
           python3 apply_prime_realtime_patch.py
           python3 apply_prime_route_helpers_fix.py
           python3 apply_home_map_categories_fix.py
-          python3 apply_address_crash_stability_patch_v2.py
+          python3 apply_address_crash_stability_patch_v3.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
