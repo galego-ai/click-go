@@ -67,6 +67,7 @@ jobs:
           python3 apply_driver_taximeter_finance_v21.py
           python3 apply_driver_flow_v22.py
           python3 apply_driver_login_sound_bubble_v23.py
+          python3 apply_driver_v23_registration_restore.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
