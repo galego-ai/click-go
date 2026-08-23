@@ -36,7 +36,7 @@ jobs:
       - name: Prepare preview signing key
         run: |
           base64 -d android-native/motorista/app/preview-debug.keystore.b64 > android-native/motorista/app/preview-debug.keystore
-      - name: Apply driver v0.6 features
+      - name: Apply driver v0.7 review features
         working-directory: android-native/motorista
         run: |
           python3 apply_login_stability_patch.py
@@ -45,15 +45,16 @@ jobs:
           python3 apply_registration_imports_patch.py
           python3 apply_driver_menu_patch.py
           python3 apply_franchise_selection_patch.py
+          python3 apply_professional_ui_patch.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v0.6.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v0.7-review.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v0.6
-          path: apk-output/CLICK-GO-Motorista-native-v0.6.apk
+          name: CLICK-GO-Motorista-native-v0.7-review
+          path: apk-output/CLICK-GO-Motorista-native-v0.7-review.apk
           if-no-files-found: error
