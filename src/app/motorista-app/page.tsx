@@ -1,154 +1,44 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
+import {FormEvent,useEffect,useState} from 'react'
+import {Bell,CarFront,ChevronRight,CircleHelp,FileCheck2,Home,LogOut,MapPin,Menu,Navigation,ShieldCheck,Star,Upload,UserRound,WalletCards} from 'lucide-react'
+import {supabase} from '@/lib/supabase'
 
-type City = { id: string; name: string; state: string }
-type Driver = { id:string; status:string; online:boolean; rating:number|string; city_id:string|null; franchise_id:string|null; rejection_reason:string|null }
-type Profile = { id:string; full_name:string|null; email:string|null; phone:string|null; role:string; city_id:string|null; franchise_id:string|null }
-type Doc = { id:string; document_type:string; file_path:string; status:string; rejection_reason:string|null; created_at:string }
-type Vehicle = { id:string; make:string; model:string; year:number|null; plate:string; color:string|null; vehicle_type:string|null; active:boolean }
+type Screen='home'|'documents'|'vehicle'|'profile'|'help'
+type SignupOption={franchise_id:string;franchise_name:string;city_id:string;city_name:string;state:string}
+type Driver={id:string;status:string;online:boolean;rating:number|string;city_id:string|null;franchise_id:string|null;rejection_reason:string|null}
+type Profile={id:string;full_name:string|null;email:string|null;phone:string|null;role:string;city_id:string|null;franchise_id:string|null;avatar_url?:string|null}
+type Doc={id:string;document_type:string;file_path:string;status:string;rejection_reason:string|null;created_at:string}
+type Vehicle={id:string;make:string;model:string;year:number|null;plate:string;color:string|null;vehicle_type:string|null;active:boolean}
+type Ticket={id:string;subject:string;status:string;created_at:string}
+const docTypes=[['cnh_frente','CNH · frente'],['cnh_verso','CNH · verso'],['selfie_cnh','Selfie com a CNH'],['crlv','CRLV do veículo'],['comprovante_residencia','Comprovante de residência']]
 
-const menu = ['Início', 'Corridas', 'Ganhos', 'Carteira', 'Documentos', 'Meu veículo', 'Avaliações', 'Ajuda e suporte', 'Meu perfil']
-const box:React.CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:18}
-const input:React.CSSProperties={width:'100%',background:'#0d0d0d',color:'#fff',border:'1px solid #333',borderRadius:10,padding:'11px 12px'}
-const btn:React.CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'11px 14px',fontWeight:800,cursor:'pointer'}
-const docTypes=[['cnh_frente','CNH - frente'],['cnh_verso','CNH - verso'],['selfie_cnh','Selfie segurando a CNH'],['crlv','CRLV do veículo'],['comprovante_residencia','Comprovante de residência']]
+export default function DriverAppPage(){
+ const[options,setOptions]=useState<SignupOption[]>([]),[screen,setScreen]=useState<Screen>('home'),[authMode,setAuthMode]=useState<'login'|'register'>('login'),[message,setMessage]=useState(''),[loading,setLoading]=useState(false)
+ const[profile,setProfile]=useState<Profile|null>(null),[driver,setDriver]=useState<Driver|null>(null),[docs,setDocs]=useState<Doc[]>([]),[vehicles,setVehicles]=useState<Vehicle[]>([]),[tickets,setTickets]=useState<Ticket[]>([]),[docType,setDocType]=useState('cnh_frente'),[file,setFile]=useState<File|null>(null)
+ useEffect(()=>{loadSignupOptions();restoreSession();const{data:l}=supabase.auth.onAuthStateChange((_e,s)=>{if(!s){setProfile(null);setDriver(null);setDocs([]);setVehicles([]);setTickets([])}});return()=>l.subscription.unsubscribe()},[])
+ async function loadSignupOptions(){const{data,error}=await supabase.rpc('list_driver_signup_franchises');if(error){setMessage('Não foi possível carregar as franquias disponíveis.');return}setOptions((data||[]) as SignupOption[])}
+ async function restoreSession(){const{data:{user}}=await supabase.auth.getUser();if(user)await loadDriver(user.id)}
+ async function loadDriver(userId?:string){setLoading(true);setMessage('');try{const id=userId||(await supabase.auth.getUser()).data.user?.id;if(!id)return;const{data:p,error:pe}=await supabase.from('profiles').select('id,full_name,email,phone,role,city_id,franchise_id,avatar_url').eq('id',id).single();if(pe)throw pe;if(!p||p.role!=='driver'){await supabase.auth.signOut();throw new Error('Esta conta não é de motorista.')}const[{data:d,error:de},{data:documents,error:doce},{data:v,error:ve},{data:t,error:te}]=await Promise.all([supabase.from('drivers').select('id,status,online,rating,city_id,franchise_id,rejection_reason').eq('id',id).single(),supabase.from('driver_documents').select('id,document_type,file_path,status,rejection_reason,created_at').eq('driver_id',id).order('created_at',{ascending:false}),supabase.from('vehicles').select('id,make,model,year,plate,color,vehicle_type,active').eq('driver_id',id).order('created_at',{ascending:false}),supabase.from('support_tickets').select('id,subject,status,created_at').eq('requester_id',id).order('created_at',{ascending:false}).limit(20)]);if(de)throw de;if(doce)throw doce;if(ve)throw ve;if(te)throw te;setProfile(p as Profile);setDriver(d as Driver);setDocs((documents||[]) as Doc[]);setVehicles((v||[]) as Vehicle[]);setTickets((t||[]) as Ticket[])}catch(e:any){setMessage(e.message||'Erro ao carregar o cadastro.')}finally{setLoading(false)}}
+ async function login(e:FormEvent<HTMLFormElement>){e.preventDefault();setLoading(true);setMessage('Entrando...');const f=new FormData(e.currentTarget);const{data,error}=await supabase.auth.signInWithPassword({email:String(f.get('email')||'').trim(),password:String(f.get('password')||'')});if(error){setMessage(error.message);setLoading(false);return}await loadDriver(data.user.id)}
+ async function register(e:FormEvent<HTMLFormElement>){e.preventDefault();setLoading(true);setMessage('');const f=new FormData(e.currentTarget),pair=String(f.get('franchise_city')||''),[franchiseId,cityId]=pair.split('|');if(!franchiseId||!cityId){setLoading(false);setMessage('Escolha a franquia/cidade onde deseja trabalhar.');return}const{data,error}=await supabase.auth.signUp({email:String(f.get('email')||'').trim(),password:String(f.get('password')||''),options:{data:{app_role:'driver',requested_city_id:cityId,requested_franchise_id:franchiseId,full_name:String(f.get('full_name')||'').trim(),phone:String(f.get('phone')||'').trim(),cpf:String(f.get('cpf')||'').trim(),cnh_number:String(f.get('cnh_number')||'').trim(),cnh_category:String(f.get('cnh_category')||'').trim(),vehicle_plate:String(f.get('vehicle_plate')||'').trim(),vehicle_make:String(f.get('vehicle_make')||'').trim(),vehicle_model:String(f.get('vehicle_model')||'').trim(),vehicle_year:String(f.get('vehicle_year')||'').trim(),vehicle_color:String(f.get('vehicle_color')||'').trim(),vehicle_type:String(f.get('vehicle_type')||'').trim()}}});setLoading(false);if(error){setMessage(error.message);return}if(data.session){await loadDriver(data.user?.id);setMessage('Cadastro criado. Agora envie seus documentos para análise.')}else setMessage('Cadastro enviado. Confirme seu e-mail e entre novamente para concluir os documentos.')}
+ async function uploadDocument(e:FormEvent){e.preventDefault();if(!file||!profile){setMessage('Selecione um arquivo.');return}setLoading(true);setMessage('Enviando documento...');try{const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''),path=`${profile.id}/${docType}-${Date.now()}.${ext}`;const{error:up}=await supabase.storage.from('driver-documents').upload(path,file,{upsert:false,contentType:file.type||undefined});if(up)throw up;const{error:db}=await supabase.from('driver_documents').insert({driver_id:profile.id,document_type:docType,file_path:path,status:'pending'});if(db){await supabase.storage.from('driver-documents').remove([path]);throw db}setFile(null);const el=document.getElementById('driver-document-file') as HTMLInputElement|null;if(el)el.value='';setMessage('Documento enviado para análise do franqueado.');await loadDriver(profile.id)}catch(e:any){setMessage(e.message||'Erro ao enviar documento.')}finally{setLoading(false)}}
+ async function openTicket(e:FormEvent<HTMLFormElement>){e.preventDefault();if(!profile)return;setLoading(true);const f=new FormData(e.currentTarget);const{error}=await supabase.from('support_tickets').insert({requester_id:profile.id,franchise_id:profile.franchise_id,city_id:profile.city_id,subject:String(f.get('subject')||'').trim(),category:'motorista',description:String(f.get('description')||'').trim(),priority:'normal',status:'open'});setMessage(error?error.message:'Chamado aberto com sucesso.');if(!error){e.currentTarget.reset();await loadDriver(profile.id)}setLoading(false)}
+ async function logout(){await supabase.auth.signOut();setScreen('home');setAuthMode('login');setMessage('Sessão encerrada.')}
+ const approved=docs.filter(d=>d.status==='approved').length,pending=docs.filter(d=>d.status==='pending').length,rejected=docs.filter(d=>d.status==='rejected').length,first=profile?.full_name?.split(' ')[0]||'Motorista',vehicle=vehicles.find(v=>v.active)||vehicles[0]
+ const place=options.find(o=>o.city_id===profile?.city_id&&o.franchise_id===profile?.franchise_id),location=place?`${place.city_name}/${place.state}`:'Sua cidade'
+ const statusClass=driver?.status==='approved'?'good':driver?.status==='rejected'?'bad':'warn',statusLabel=driver?.status==='approved'?'Aprovado':driver?.status==='rejected'?'Reprovado':'Em análise'
 
-export default function DriverAppPage() {
-  const [cities, setCities] = useState<City[]>([])
-  const [active, setActive] = useState('Início')
-  const [authMode,setAuthMode]=useState<'login'|'register'>('login')
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [profile,setProfile]=useState<Profile|null>(null)
-  const [driver,setDriver]=useState<Driver|null>(null)
-  const [docs,setDocs]=useState<Doc[]>([])
-  const [vehicles,setVehicles]=useState<Vehicle[]>([])
-  const [docType,setDocType]=useState('cnh_frente')
-  const [file,setFile]=useState<File|null>(null)
+ if(!profile)return <main className="mobile-login"><div className="mobile-login-box"><div className="mobile-login-brand"><div className="logo">CG</div><div style={{fontSize:12,fontWeight:800,color:'#ffd400',textTransform:'uppercase',letterSpacing:'.1em'}}>CLICK-GO Motorista</div><h1>{authMode==='login'?'Pronto para rodar?':'Comece a dirigir.'}</h1><p>Um app direto ao ponto: chamadas, ganhos, carteira, documentos e suporte.</p></div><section className="mobile-auth-card"><div className="mobile-auth-tabs"><button className={authMode==='login'?'active':''} onClick={()=>setAuthMode('login')}>Entrar</button><button className={authMode==='register'?'active':''} onClick={()=>setAuthMode('register')}>Cadastrar</button></div>{authMode==='login'?<form className="mobile-form" onSubmit={login}><h2>Acessar conta</h2><p className="mobile-muted" style={{margin:'0 0 7px'}}>Entre para ficar online e receber chamadas.</p><input className="mobile-input" name="email" required type="email" placeholder="E-mail"/><input className="mobile-input" name="password" required type="password" placeholder="Senha"/><button className="mobile-primary" disabled={loading}>{loading?'Entrando...':'Entrar como motorista'}</button></form>:<form className="mobile-form" onSubmit={register}><h2>Novo motorista</h2><p className="mobile-muted" style={{margin:'0 0 7px'}}>Escolha a franquia/cidade. Seu cadastro irá exatamente para esse franqueado.</p><select className="mobile-input" name="franchise_city" required defaultValue=""><option value="" disabled>{options.length?'Escolha sua cidade / franquia':'Nenhuma franquia ativa disponível'}</option>{options.map(o=><option key={`${o.franchise_id}|${o.city_id}`} value={`${o.franchise_id}|${o.city_id}`}>{o.city_name}/{o.state} — {o.franchise_name}</option>)}</select><input className="mobile-input" name="full_name" required placeholder="Nome completo"/><input className="mobile-input" name="phone" required placeholder="Telefone / WhatsApp"/><input className="mobile-input" name="cpf" required placeholder="CPF"/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><input className="mobile-input" name="cnh_number" required placeholder="Número da CNH"/><input className="mobile-input" name="cnh_category" required placeholder="Categoria"/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><input className="mobile-input" name="vehicle_plate" required placeholder="Placa"/><input className="mobile-input" name="vehicle_type" placeholder="Tipo do veículo"/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><input className="mobile-input" name="vehicle_make" placeholder="Marca"/><input className="mobile-input" name="vehicle_model" placeholder="Modelo"/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><input className="mobile-input" name="vehicle_year" type="number" placeholder="Ano"/><input className="mobile-input" name="vehicle_color" placeholder="Cor"/></div><input className="mobile-input" name="email" required type="email" placeholder="E-mail"/><input className="mobile-input" name="password" required minLength={6} type="password" placeholder="Senha (mínimo 6 caracteres)"/><button className="mobile-primary" disabled={loading||!options.length}>{loading?'Enviando...':'Enviar cadastro para aprovação'}</button></form>}{message&&<div className="mobile-alert">{message}</div>}</section></div></main>
 
-  useEffect(() => {
-    supabase.from('cities').select('id,name,state').eq('active', true).order('name').then(({data,error}) => {
-      setCities((data || []) as City[])
-      if(error) setMessage('Não foi possível carregar as cidades: '+error.message)
-    })
-    restoreSession()
-    const {data:listener}=supabase.auth.onAuthStateChange((_event,session)=>{if(!session){setProfile(null);setDriver(null);setDocs([]);setVehicles([])}})
-    return()=>listener.subscription.unsubscribe()
-  }, [])
+ const home=<><section className="mobile-hero"><div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start'}}><div><div className="overline">Olá, {first}</div><h1>{driver?.status==='approved'?'Vamos trabalhar?':'Seu cadastro'}</h1><p>{driver?.status==='approved'?`${location} · acompanhe chamadas, ganhos e saldo operacional.`:'Acompanhe a análise dos documentos e deixe seu cadastro pronto.'}</p></div><span className={`mobile-status ${statusClass}`}>{statusLabel}</span></div>{driver?.status==='approved'?<Link className="mobile-destination" href="/motorista-app/operacao" style={{display:'block',textDecoration:'none'}}><button><span className="pin"/><span>{driver.online?'Você está online · abrir operação':'Ficar online e receber chamadas'}</span><ChevronRight size={18} style={{marginLeft:'auto'}}/></button></Link>:<div className="mobile-destination"><button onClick={()=>setScreen('documents')}><FileCheck2 size={18}/><span>Concluir documentação</span><ChevronRight size={18} style={{marginLeft:'auto'}}/></button></div>}</section><section className="mobile-section"><div className="mobile-section-head"><h2>Seu dia</h2><span>Visão rápida</span></div><div className="mobile-grid"><Link href="/motorista-app/operacao" className="mobile-card mobile-card-action"><Navigation size={21}/><div className="value" style={{fontSize:16}}>Corridas</div><div className="caption">Abrir operação</div></Link><Link href="/motorista-app/carteira" className="mobile-card mobile-card-action"><WalletCards size={21}/><div className="value" style={{fontSize:16}}>Carteira</div><div className="caption">Saldo e ganhos</div></Link><div className="mobile-card mobile-card-action" onClick={()=>setScreen('documents')}><FileCheck2 size={21}/><div className="value" style={{fontSize:16}}>Documentos</div><div className="caption">{approved} aprovados · {pending} análise</div></div><div className="mobile-card mobile-card-action" onClick={()=>setScreen('vehicle')}><CarFront size={21}/><div className="value" style={{fontSize:16}}>Veículo</div><div className="caption">{vehicle?`${vehicle.make} ${vehicle.model}`:'Cadastrar dados'}</div></div></div></section><section className="mobile-section"><div className="mobile-section-head"><h2>Desempenho</h2></div><div className="mobile-card" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><div><div className="caption">Avaliação</div><div className="value"><Star size={19} fill="currentColor" style={{verticalAlign:'middle',marginRight:5}}/>{Number(driver?.rating||0).toFixed(1)}</div></div><div><div className="caption">Situação</div><div className="value" style={{fontSize:18}}>{statusLabel}</div></div></div></section>{rejected>0&&<div className="mobile-alert">Você tem {rejected} documento(s) reprovado(s). Abra Documentos para corrigir.</div>}</>
 
-  async function restoreSession(){
-    const {data:{user}}=await supabase.auth.getUser()
-    if(user) await loadDriver(user.id)
-  }
+ const documents=<section className="mobile-content-panel"><div className="mobile-section-head"><div><h2>Documentos</h2><div className="mobile-muted">Envie arquivos legíveis. O franqueado responsável fará a conferência.</div></div><FileCheck2 size={22}/></div><form onSubmit={uploadDocument} className="mobile-form" style={{marginTop:14}}><select className="mobile-input" value={docType} onChange={e=>setDocType(e.target.value)}>{docTypes.map(([v,n])=><option key={v} value={v}>{n}</option>)}</select><input id="driver-document-file" className="mobile-input" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={e=>setFile(e.target.files?.[0]||null)}/><button className="mobile-primary" disabled={loading}><Upload size={17} style={{verticalAlign:'middle',marginRight:7}}/>{loading?'Enviando...':'Enviar documento'}</button></form><div style={{display:'grid',gap:8,marginTop:15}}>{docs.map(d=><div className="mobile-card" key={d.id} style={{display:'flex',justifyContent:'space-between',gap:10}}><div><b>{docTypes.find(x=>x[0]===d.document_type)?.[1]||d.document_type}</b><div className="caption">{new Date(d.created_at).toLocaleDateString('pt-BR')}{d.rejection_reason?` · ${d.rejection_reason}`:''}</div></div><span className={`mobile-status ${d.status==='approved'?'good':d.status==='rejected'?'bad':'warn'}`}>{d.status==='approved'?'Aprovado':d.status==='rejected'?'Reprovado':'Em análise'}</span></div>)}{!docs.length&&<div className="mobile-muted">Nenhum documento enviado.</div>}</div></section>
+ const vehiclePanel=<section className="mobile-content-panel"><h2>Meu veículo</h2><p className="mobile-muted">Dados do veículo associado à sua operação.</p>{vehicle?<div className="mobile-card" style={{marginTop:14}}><CarFront size={24}/><div style={{fontSize:20,fontWeight:900,marginTop:8}}>{vehicle.make} {vehicle.model}</div><div className="mobile-muted">{vehicle.plate} · {vehicle.color||'Cor não informada'} · {vehicle.year||'Ano não informado'}</div><div style={{marginTop:10}}><span className={`mobile-status ${vehicle.active?'good':'warn'}`}>{vehicle.active?'Ativo':'Inativo'}</span></div></div>:<div className="mobile-muted">Nenhum veículo encontrado no cadastro.</div>}</section>
+ const profilePanel=<section className="mobile-content-panel"><h2>Meu perfil</h2><div style={{display:'flex',gap:12,alignItems:'center',marginTop:14}}>{profile.avatar_url?<img src={profile.avatar_url} alt="Perfil" style={{width:64,height:64,borderRadius:'50%',objectFit:'cover'}}/>:<div style={{width:64,height:64,borderRadius:'50%',background:'#111',color:'#ffd400',display:'grid',placeItems:'center',fontWeight:900,fontSize:20}}>{first.slice(0,1)}</div>}<div><b style={{fontSize:18}}>{profile.full_name||'Motorista'}</b><div className="mobile-muted">{profile.email}<br/>{profile.phone}<br/>{location}</div></div></div><div className="mobile-card" style={{marginTop:15}}><ShieldCheck size={20}/><b style={{display:'block',marginTop:6}}>Vinculado à sua franquia</b><div className="caption">Aprovações, preços e operação local são gerenciados pelo franqueado responsável.</div></div><button className="mobile-secondary" style={{width:'100%',marginTop:14}} onClick={logout}><LogOut size={16} style={{verticalAlign:'middle',marginRight:7}}/>Sair da conta</button></section>
+ const help=<section className="mobile-content-panel"><h2>Ajuda e suporte</h2><p className="mobile-muted">Problemas com cadastro, corrida ou pagamento? Abra um chamado.</p><form className="mobile-form" onSubmit={openTicket} style={{marginTop:14}}><input className="mobile-input" name="subject" required placeholder="Assunto"/><textarea className="mobile-input" name="description" required rows={5} placeholder="Descreva como podemos ajudar" style={{paddingTop:13}}/><button className="mobile-primary" disabled={loading}>Enviar chamado</button></form><div style={{display:'grid',gap:8,marginTop:14}}>{tickets.map(t=><div className="mobile-card" key={t.id}><b>{t.subject}</b><div className="caption">{t.status} · {new Date(t.created_at).toLocaleDateString('pt-BR')}</div></div>)}</div></section>
+ const content=screen==='home'?home:screen==='documents'?documents:screen==='vehicle'?vehiclePanel:screen==='profile'?profilePanel:help
 
-  async function loadDriver(userId?:string){
-    setLoading(true);setMessage('')
-    try{
-      const id=userId || (await supabase.auth.getUser()).data.user?.id
-      if(!id)return
-      const {data:p,error:pe}=await supabase.from('profiles').select('id,full_name,email,phone,role,city_id,franchise_id').eq('id',id).single()
-      if(pe)throw pe
-      if(!p || p.role!=='driver'){
-        await supabase.auth.signOut()
-        throw new Error('Esta conta não é de motorista.')
-      }
-      const [{data:d,error:de},{data:documents,error:doce},{data:v,error:ve}]=await Promise.all([
-        supabase.from('drivers').select('id,status,online,rating,city_id,franchise_id,rejection_reason').eq('id',id).single(),
-        supabase.from('driver_documents').select('id,document_type,file_path,status,rejection_reason,created_at').eq('driver_id',id).order('created_at',{ascending:false}),
-        supabase.from('vehicles').select('id,make,model,year,plate,color,vehicle_type,active').eq('driver_id',id).order('created_at',{ascending:false})
-      ])
-      if(de)throw de;if(doce)throw doce;if(ve)throw ve
-      setProfile(p as Profile);setDriver(d as Driver);setDocs((documents||[]) as Doc[]);setVehicles((v||[]) as Vehicle[])
-    }catch(e:any){setMessage(e.message||'Erro ao carregar cadastro do motorista.')}
-    finally{setLoading(false)}
-  }
-
-  async function login(e:FormEvent<HTMLFormElement>){
-    e.preventDefault();setLoading(true);setMessage('Entrando...')
-    const data=new FormData(e.currentTarget)
-    const {data:auth,error}=await supabase.auth.signInWithPassword({email:String(data.get('email')||'').trim(),password:String(data.get('password')||'')})
-    if(error){setMessage(error.message);setLoading(false);return}
-    await loadDriver(auth.user.id)
-  }
-
-  async function register(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();setLoading(true);setMessage('')
-    const data = new FormData(e.currentTarget)
-    const cityId=String(data.get('city_id')||'')
-    if(!cityId){setLoading(false);setMessage('Escolha a cidade onde deseja trabalhar.');return}
-    const { data:auth, error } = await supabase.auth.signUp({
-      email: String(data.get('email') || '').trim(),
-      password: String(data.get('password') || ''),
-      options: {data: {
-        app_role: 'driver', requested_city_id: cityId,
-        full_name: String(data.get('full_name') || '').trim(), phone: String(data.get('phone') || '').trim(), cpf: String(data.get('cpf') || '').trim(),
-        cnh_number: String(data.get('cnh_number') || '').trim(), cnh_category: String(data.get('cnh_category') || '').trim(),
-        vehicle_plate: String(data.get('vehicle_plate') || '').trim(), vehicle_make: String(data.get('vehicle_make') || '').trim(), vehicle_model: String(data.get('vehicle_model') || '').trim(),
-        vehicle_year: String(data.get('vehicle_year') || '').trim(), vehicle_color: String(data.get('vehicle_color') || '').trim(), vehicle_type: String(data.get('vehicle_type') || '').trim(),
-      }}
-    })
-    setLoading(false)
-    if(error){setMessage(error.message);return}
-    if(auth.session){await loadDriver(auth.user?.id);setMessage('Cadastro criado. Envie agora seus documentos para análise.')}
-    else{setMessage('Cadastro enviado. Confirme seu e-mail e depois entre no App Motorista para enviar os documentos. O franqueado da cidade escolhida fará a aprovação.')}
-  }
-
-  async function uploadDocument(e:FormEvent){
-    e.preventDefault();if(!file||!profile){setMessage('Selecione um arquivo.');return}
-    setLoading(true);setMessage('Enviando documento...')
-    try{
-      const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')
-      const path=`${profile.id}/${docType}-${Date.now()}.${ext}`
-      const {error:up}=await supabase.storage.from('driver-documents').upload(path,file,{upsert:false,contentType:file.type||undefined})
-      if(up)throw up
-      const {error:db}=await supabase.from('driver_documents').insert({driver_id:profile.id,document_type:docType,file_path:path,status:'pending'})
-      if(db){await supabase.storage.from('driver-documents').remove([path]);throw db}
-      setFile(null);const element=document.getElementById('driver-document-file') as HTMLInputElement|null;if(element)element.value=''
-      setMessage('Documento enviado. O franqueado poderá analisá-lo agora.');await loadDriver(profile.id)
-    }catch(e:any){setMessage(e.message||'Erro ao enviar documento.')}
-    finally{setLoading(false)}
-  }
-
-  async function logout(){await supabase.auth.signOut();setMessage('Sessão encerrada.');setAuthMode('login');setActive('Início')}
-
-  const cityName=useMemo(()=>{const c=cities.find(x=>x.id===profile?.city_id);return c?`${c.name}/${c.state}`:'-'},[cities,profile])
-  const approvedDocs=docs.filter(d=>d.status==='approved').length
-  const pendingDocs=docs.filter(d=>d.status==='pending').length
-  const rejectedDocs=docs.filter(d=>d.status==='rejected').length
-
-  if(!profile) return <main style={{minHeight:'100vh',background:'#080808',color:'#f8fafc',padding:24}}>
-    <div style={{maxWidth:760,margin:'0 auto'}}>
-      <div className="eyebrow">App Motorista</div><h1 className="title">CLICK-GO Motorista</h1><p className="subtitle">Cadastre-se para trabalhar ou entre para acompanhar sua aprovação e enviar documentos.</p>
-      <div style={{display:'flex',gap:8,margin:'22px 0 14px'}}><button style={{...btn,background:authMode==='login'?'#ffd400':'#222',color:authMode==='login'?'#000':'#fff'}} onClick={()=>setAuthMode('login')}>Entrar</button><button style={{...btn,background:authMode==='register'?'#ffd400':'#222',color:authMode==='register'?'#000':'#fff'}} onClick={()=>setAuthMode('register')}>Criar cadastro</button></div>
-      <section style={box}>
-        {authMode==='login'?<form onSubmit={login} style={{display:'grid',gap:12}}><h2 style={{marginTop:0}}>Entrar como motorista</h2><input name="email" required type="email" placeholder="E-mail" style={input}/><input name="password" required type="password" placeholder="Senha" style={input}/><button style={btn} disabled={loading}>{loading?'Entrando...':'Entrar'}</button></form>:<form onSubmit={register} style={{display:'grid',gap:12}}>
-          <h2 style={{marginTop:0}}>Cadastro do motorista</h2><p className="subtitle">Escolha a cidade onde deseja trabalhar. Seu cadastro será encaminhado automaticamente ao franqueado responsável.</p>
-          <select name="city_id" required style={input} defaultValue=""><option value="" disabled>{cities.length?'Escolha a cidade de atuação':'Carregando cidades...'}</option>{cities.map(c=><option key={c.id} value={c.id}>{c.name} - {c.state}</option>)}</select>
-          {!cities.length&&<div style={{color:'#fca5a5',fontSize:13}}>Nenhuma cidade ativa disponível para cadastro neste momento.</div>}
-          <input name="full_name" required placeholder="Nome completo" style={input}/><input name="phone" required placeholder="Telefone / WhatsApp" style={input}/><input name="cpf" required placeholder="CPF" style={input}/><input name="cnh_number" required placeholder="Número da CNH" style={input}/><input name="cnh_category" required placeholder="Categoria da CNH" style={input}/>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><input name="vehicle_plate" required placeholder="Placa" style={input}/><input name="vehicle_type" placeholder="Tipo do veículo" style={input}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><input name="vehicle_make" placeholder="Marca" style={input}/><input name="vehicle_model" placeholder="Modelo" style={input}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}><input name="vehicle_year" type="number" placeholder="Ano" style={input}/><input name="vehicle_color" placeholder="Cor" style={input}/></div>
-          <input name="email" required type="email" placeholder="E-mail" style={input}/><input name="password" required type="password" minLength={6} placeholder="Senha (mínimo 6 caracteres)" style={input}/><button style={btn} disabled={loading||!cities.length}>{loading?'Enviando...':'Enviar cadastro para aprovação'}</button>
-        </form>}
-        {message&&<p style={{marginTop:14,color:'#ffe66b'}}>{message}</p>}
-      </section>
-    </div>
-  </main>
-
-  return <main style={{minHeight:'100vh',background:'#080808',color:'#f8fafc',padding:20}}>
-    <div className="topbar"><div><div className="eyebrow">App Motorista</div><h1 className="title">CLICK-GO Motorista</h1><p className="subtitle">{profile.full_name||profile.email} · {cityName}</p></div><button style={{...btn,background:'#222',color:'#fff'}} onClick={logout}>Sair</button></div>
-    <div style={{display:'grid',gridTemplateColumns:'230px 1fr',gap:16,alignItems:'start'}}>
-      <aside style={{...box,padding:10}}>{menu.map(item=><button key={item} onClick={()=>setActive(item)} style={{display:'block',width:'100%',textAlign:'left',padding:'12px',marginBottom:6,border:0,borderRadius:10,cursor:'pointer',fontWeight:700,background:active===item?'#ffd400':'#1d1d1d',color:active===item?'#000':'#fff'}}>{item}</button>)}</aside>
-      <section style={box}>
-        <div className="eyebrow">{active}</div>
-        {active==='Início'&&<><h2>Status do cadastro</h2><div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,marginTop:14}}><div style={box}><div className="label">Situação</div><div className="metric" style={{fontSize:22}}>{driver?.status||'-'}</div></div><div style={box}><div className="label">Documentos aprovados</div><div className="metric">{approvedDocs}</div></div><div style={box}><div className="label">Em análise</div><div className="metric">{pendingDocs}</div></div><div style={box}><div className="label">Reprovados</div><div className="metric">{rejectedDocs}</div></div></div>{driver?.status==='pending'&&<p style={{color:'#fde68a',marginTop:16}}>Seu cadastro está aguardando aprovação do franqueado. Envie todos os documentos solicitados na aba Documentos.</p>}{driver?.status==='approved'&&<p style={{color:'#86efac',marginTop:16}}>Cadastro aprovado. Você já pode avançar para a operação e ficar online quando o fluxo de corridas estiver habilitado.</p>}{driver?.status==='rejected'&&<p style={{color:'#fca5a5',marginTop:16}}>Cadastro reprovado. {driver.rejection_reason||'Entre em contato com o suporte da sua cidade.'}</p>}</>}
-        {active==='Documentos'&&<><h2>Meus documentos</h2><p className="subtitle">Envie fotos legíveis ou PDF. Os arquivos ficam privados e somente você, o franqueado responsável e a matriz podem acessar.</p><form onSubmit={uploadDocument} style={{display:'grid',gridTemplateColumns:'1fr 1.5fr auto',gap:10,alignItems:'end',marginTop:18}}><label style={{display:'grid',gap:6,fontSize:13}}>Tipo<select value={docType} onChange={e=>setDocType(e.target.value)} style={input}>{docTypes.map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label><label style={{display:'grid',gap:6,fontSize:13}}>Arquivo<input id="driver-document-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required onChange={e=>setFile(e.target.files?.[0]||null)} style={input}/></label><button style={btn} disabled={loading}>{loading?'Enviando...':'Enviar documento'}</button></form><div style={{display:'grid',gap:10,marginTop:18}}>{docs.map(d=><div key={d.id} style={{...box,display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr',gap:12,alignItems:'center'}}><div><b>{docTypes.find(x=>x[0]===d.document_type)?.[1]||d.document_type}</b><div style={{fontSize:12,color:'#9ca3af'}}>{new Date(d.created_at).toLocaleString('pt-BR')}</div></div><span>{d.status}</span><span style={{color:d.status==='rejected'?'#fca5a5':'#9ca3af'}}>{d.rejection_reason||'Sem observações'}</span></div>)}{!docs.length&&<div style={box}>Você ainda não enviou documentos.</div>}</div></>}
-        {active==='Meu veículo'&&<><h2>Meu veículo</h2>{vehicles.map(v=><div key={v.id} style={box}><b>{v.make} {v.model}</b><div style={{color:'#9ca3af',marginTop:6}}>{v.plate} · {v.year||'-'} · {v.color||'-'} · {v.vehicle_type||'Veículo'}</div></div>)}{!vehicles.length&&<p className="subtitle">Nenhum veículo cadastrado.</p>}</>}
-        {active==='Meu perfil'&&<><h2>Meu perfil</h2><div style={box}><div><b>{profile.full_name||'Motorista'}</b></div><div style={{color:'#9ca3af',marginTop:8}}>{profile.email}<br/>{profile.phone}<br/>{cityName}</div></div></>}
-        {!['Início','Documentos','Meu veículo','Meu perfil'].includes(active)&&<><h2>{active}</h2><p className="subtitle">Esta área será liberada conforme o cadastro e a operação do motorista forem aprovados. Enquanto estiver pendente, o motorista não pode receber corridas.</p></>}
-        {message&&<p style={{marginTop:14,color:'#ffe66b'}}>{message}</p>}
-      </section>
-    </div>
-  </main>
+ return <main className="mobile-app"><div className="mobile-app-frame"><header className="mobile-app-top"><button className="mobile-round" onClick={()=>setScreen('profile')} aria-label="Menu"><Menu size={19}/></button><div className="mobile-brand"><div className="mobile-logo">CG</div><div><strong>CLICK-GO</strong><span>Motorista</span></div></div><button className="mobile-round" onClick={()=>setScreen('help')} aria-label="Ajuda"><Bell size={18}/></button></header><div className="mobile-body">{content}{message&&<div className="mobile-alert">{message}</div>}</div><nav className="mobile-bottom-nav"><button className={screen==='home'?'mobile-nav-item active':'mobile-nav-item'} onClick={()=>setScreen('home')}><Home size={20}/><span>Início</span><i className="nav-dot"/></button><Link className="mobile-nav-item" href="/motorista-app/operacao"><Navigation size={20}/><span>Corridas</span><i className="nav-dot"/></Link><Link className="mobile-nav-item" href="/motorista-app/carteira"><WalletCards size={20}/><span>Ganhos</span><i className="nav-dot"/></Link><button className={screen==='profile'?'mobile-nav-item active':'mobile-nav-item'} onClick={()=>setScreen('profile')}><UserRound size={20}/><span>Perfil</span><i className="nav-dot"/></button></nav></div></main>
 }
