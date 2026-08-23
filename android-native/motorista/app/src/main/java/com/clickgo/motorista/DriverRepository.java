@@ -18,6 +18,10 @@ public final class DriverRepository {
         return new JSONArray(ApiClient.publicRestGet("cities?select=id,name,state&active=eq.true&order=name.asc"));
     }
 
+    public static JSONArray activeSignupFranchises() throws Exception {
+        return new JSONArray(ApiClient.publicRpc("list_driver_signup_franchises", new JSONObject()));
+    }
+
     public static String userId(String token) throws Exception {
         return new JSONObject(ApiClient.authGetUser(token)).optString("id", "");
     }
@@ -39,7 +43,7 @@ public final class DriverRepository {
         String documentPath = userId + "/profile_photo.jpg";
         ApiClient.storageUpload("driver-avatars", avatarPath, jpeg, "image/jpeg", token);
         ApiClient.storageUpload("driver-documents", documentPath, jpeg, "image/jpeg", token);
-        String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + avatarPath;
+        String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + avatarPath + "?v=" + System.currentTimeMillis();
         ApiClient.restPatch("profiles?id=eq." + userId, new JSONObject().put("avatar_url", publicUrl), token);
 
         JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq.profile_photo&select=id&order=created_at.desc&limit=1", token));
@@ -49,6 +53,16 @@ public final class DriverRepository {
                     .put("document_type", "profile_photo")
                     .put("file_path", documentPath)
                     .put("status", "pending"), token);
+        } else {
+            String documentId = existing.getJSONObject(0).optString("id", "");
+            if (!documentId.isBlank()) {
+                ApiClient.restPatch("driver_documents?id=eq." + documentId, new JSONObject()
+                        .put("file_path", documentPath)
+                        .put("status", "pending")
+                        .put("rejection_reason", JSONObject.NULL)
+                        .put("reviewed_by", JSONObject.NULL)
+                        .put("reviewed_at", JSONObject.NULL), token);
+            }
         }
         return publicUrl;
     }
