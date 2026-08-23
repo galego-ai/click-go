@@ -62,15 +62,17 @@ jobs:
           python3 apply_session_refresh_patch.py
           python3 apply_category_crash_fix_v23.py
           python3 apply_passenger_stable_v24_patch.py
+          python3 apply_passenger_stable_dispatch_v25.py
+          python3 apply_passenger_stable_dispatch_v25_compile_fix.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.4-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.5-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.4-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.4-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.5-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.5-prime.apk
           if-no-files-found: error
