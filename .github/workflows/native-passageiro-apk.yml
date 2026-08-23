@@ -56,6 +56,7 @@ jobs:
           python3 apply_map_places_satellite_patch.py
           python3 apply_profile_photo_cpf_lock_patch.py
           python3 apply_prime_realtime_patch.py
+          python3 apply_prime_route_helpers_fix.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
