@@ -10,6 +10,7 @@ const primary = [
   ['Franquias','/franquias'],
   ['Motoristas','/motoristas'],
   ['Corridas','/corridas'],
+  ['Segurança','/seguranca'],
   ['Financeiro','/financeiro'],
   ['Suporte','/suporte'],
 ]
