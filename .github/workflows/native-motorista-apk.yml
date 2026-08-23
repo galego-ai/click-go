@@ -1,6 +1,11 @@
 name: Native Motorista APK
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-native/motorista/**'
+      - '.github/workflows/native-motorista-apk.yml'
   pull_request:
     branches: [main]
     paths:
