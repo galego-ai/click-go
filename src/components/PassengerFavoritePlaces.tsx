@@ -1,0 +1,21 @@
+'use client'
+
+import { FormEvent, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import AddressSearch from '@/components/AddressSearch'
+
+type Fav={id:string;label:string;address_label:string;lat:number;lng:number;created_at:string}
+type Pick={label:string;lat:number;lng:number}
+const box:React.CSSProperties={background:'#101010',border:'1px solid #292929',borderRadius:16,padding:16}
+const input:React.CSSProperties={width:'100%',background:'#0d0d0d',color:'#fff',border:'1px solid #333',borderRadius:10,padding:'11px 12px'}
+const btn:React.CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'11px 14px',fontWeight:800,cursor:'pointer'}
+
+export default function PassengerFavoritePlaces(){
+ const[items,setItems]=useState<Fav[]>([]),[label,setLabel]=useState('Casa'),[pick,setPick]=useState<Pick|null>(null),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false)
+ useEffect(()=>{load()},[])
+ async function load(){const{data,error}=await supabase.from('passenger_favorite_places').select('id,label,address_label,lat,lng,created_at').order('created_at',{ascending:false});if(error)setMsg(error.message);else setItems((data||[]) as Fav[])}
+ async function save(e:FormEvent){e.preventDefault();if(!pick)return setMsg('Escolha um endereço ou use sua localização atual.');setBusy(true);const{data:{user}}=await supabase.auth.getUser();if(!user){setBusy(false);return setMsg('Faça login novamente.')}const{error}=await supabase.from('passenger_favorite_places').insert({passenger_id:user.id,label:label.trim()||'Favorito',address_label:pick.label,lat:pick.lat,lng:pick.lng});setBusy(false);setMsg(error?error.message:'Endereço favorito salvo.');if(!error){setPick(null);await load()}}
+ async function current(){if(!navigator.geolocation)return setMsg('GPS não disponível neste aparelho.');setBusy(true);setMsg('Obtendo sua localização atual...');navigator.geolocation.getCurrentPosition(async p=>{try{const qs=new URLSearchParams({reverse:'1',lat:String(p.coords.latitude),lng:String(p.coords.longitude)});const r=await fetch(`/api/geocode?${qs}`);const b=await r.json();const x=b?.results?.[0];setPick({label:x?.label||'Minha localização atual',lat:p.coords.latitude,lng:p.coords.longitude});setMsg('Localização atual selecionada.')}catch{setPick({label:'Minha localização atual',lat:p.coords.latitude,lng:p.coords.longitude});setMsg('Localização atual selecionada.')}finally{setBusy(false)}},()=>{setBusy(false);setMsg('Não foi possível obter sua localização.')},{enableHighAccuracy:true,timeout:10000,maximumAge:15000})}
+ async function remove(id:string){const{error}=await supabase.from('passenger_favorite_places').delete().eq('id',id);setMsg(error?error.message:'Favorito removido.');if(!error)await load()}
+ return <div style={{display:'grid',gap:14}}><h2 style={{marginBottom:0}}>Endereços favoritos</h2><p className="subtitle" style={{marginTop:0}}>Salve Casa, Trabalho ou outro local. A lupa sugere endereços a partir de 3 caracteres e prioriza resultados próximos de você.</p><form onSubmit={save} style={{...box,display:'grid',gap:12}}><label style={{display:'grid',gap:6}}>Nome do favorito<input value={label} onChange={e=>setLabel(e.target.value)} style={input} placeholder="Casa, Trabalho..."/></label><AddressSearch title="Pesquisar endereço" placeholder="Digite pelo menos 3 caracteres ou números" onSelect={setPick}/><button type="button" style={{...btn,background:'#242424',color:'#fff'}} onClick={current} disabled={busy}>📍 Usar minha localização atual</button>{pick&&<div style={{background:'#171717',borderRadius:12,padding:12}}><b>Selecionado</b><div style={{color:'#aaa',fontSize:13,marginTop:4}}>{pick.label}</div></div>}<button style={btn} disabled={busy||!pick}>{busy?'Salvando...':'Salvar favorito'}</button></form>{msg&&<div style={{color:'#ffe66b'}}>{msg}</div>}<div style={{display:'grid',gap:9}}>{items.map(x=><div key={x.id} style={{...box,display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><div><b>{x.label}</b><div style={{fontSize:13,color:'#9ca3af',marginTop:4}}>{x.address_label}</div></div><button style={{...btn,background:'#3a1b1b',color:'#fff'}} onClick={()=>remove(x.id)}>Remover</button></div>)}{!items.length&&<div style={box}>Nenhum endereço favorito salvo ainda.</div>}</div></div>
+}
