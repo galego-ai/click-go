@@ -57,6 +57,7 @@ jobs:
           python3 apply_full_route_history_v17.py
           python3 apply_driver_safety_v18.py
           python3 apply_driver_taximeter_v19.py
+          python3 apply_driver_taximeter_v19_fix.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
