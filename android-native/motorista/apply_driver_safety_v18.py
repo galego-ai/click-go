@@ -21,10 +21,17 @@ if field_anchor in text and 'safetyRoutePoints' not in text:
     text=text.replace(field_anchor,fields,1)
 
 # Cada atualização do GPS também verifica desvio da rota original da corrida.
-old_listener='''locationListener = loc -> { currentLocation=loc; if(online) io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); };'''
-new_listener='''locationListener = loc -> { currentLocation=loc; checkSafetyRouteDeviation(loc); if(online) io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); };'''
-if old_listener not in text: raise SystemExit('locationListener final não encontrado')
-text=text.replace(old_listener,new_listener,1)
+# Aceita tanto o listener legado quanto o listener estabilizado que evita fila de envios.
+legacy_listener='''locationListener = loc -> { currentLocation=loc; if(online) io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); };'''
+legacy_safety='''locationListener = loc -> { currentLocation=loc; checkSafetyRouteDeviation(loc); if(online) io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); };'''
+stable_listener='''        locationListener = loc -> {\n            currentLocation=loc;\n            if(online && sendingLocation.compareAndSet(false,true)) io.execute(() -> {\n                try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); }\n                catch(Exception ignored){}\n                finally { sendingLocation.set(false); }\n            });\n        };'''
+stable_safety='''        locationListener = loc -> {\n            currentLocation=loc;\n            checkSafetyRouteDeviation(loc);\n            if(online && sendingLocation.compareAndSet(false,true)) io.execute(() -> {\n                try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); }\n                catch(Exception ignored){}\n                finally { sendingLocation.set(false); }\n            });\n        };'''
+if stable_listener in text:
+    text=text.replace(stable_listener,stable_safety,1)
+elif legacy_listener in text:
+    text=text.replace(legacy_listener,legacy_safety,1)
+elif 'checkSafetyRouteDeviation(loc);' not in text:
+    raise SystemExit('locationListener compatível não encontrado')
 
 # Troca o botão de início direto por validação obrigatória do PIN e inclui SOS na corrida ativa.
 old_arriving='''        }else if(s.equals("driver_arriving")){\n            int free=r.optInt("wait_free_seconds",300); double fee=r.optDouble("wait_fee_per_minute",0.50);\n            c.addView(text("⏱ Tolerância: "+Math.max(0,free/60)+" min",14,YELLOW,true));\n            c.addView(text("Depois: "+money(fee)+" por minuto iniciado",13,GRAY,false)); c.addView(space(8));\n            Button nav=darkButton("🧭 Abrir navegação"); c.addView(nav,match(dp(54))); c.addView(space(8));\n            Button start=primary("▶ Iniciar corrida"); c.addView(start,match(dp(58)));\n            nav.setOnClickListener(v->openNavigationToPassenger(r)); start.setOnClickListener(v->advance(r.optString("id"),"start"));\n        }else{'''
