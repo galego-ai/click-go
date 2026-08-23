@@ -49,16 +49,6 @@ public final class DriverRepository {
                     .put("document_type", "profile_photo")
                     .put("file_path", documentPath)
                     .put("status", "pending"), token);
-        } else {
-            String docId = existing.getJSONObject(0).optString("id", "");
-            if (!docId.isBlank()) {
-                ApiClient.restPatch("driver_documents?id=eq." + docId, new JSONObject()
-                        .put("file_path", documentPath)
-                        .put("status", "pending")
-                        .put("rejection_reason", JSONObject.NULL)
-                        .put("reviewed_by", JSONObject.NULL)
-                        .put("reviewed_at", JSONObject.NULL), token);
-            }
         }
         return publicUrl;
     }
