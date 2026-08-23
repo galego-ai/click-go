@@ -50,7 +50,7 @@ jobs:
           python3 apply_driver_doc_rpc_patch.py
           python3 apply_vehicle_type_validation_patch.py
           python3 apply_location_heartbeat_patch.py
-          python3 apply_session_refresh_patch.py
+          python3 apply_session_refresh_patch_v2.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
