@@ -33,6 +33,10 @@ public final class ApiClient {
         return request(BuildConfig.SUPABASE_URL + "/rest/v1/" + pathAndQuery, "GET", null, false, null, true);
     }
 
+    public static String restPost(String path, JSONObject body, String token) throws Exception {
+        return request(BuildConfig.SUPABASE_URL + "/rest/v1/" + path, "POST", body.toString(), true, token, true);
+    }
+
     public static String restPatch(String pathAndQuery, JSONObject body, String token) throws Exception {
         return request(BuildConfig.SUPABASE_URL + "/rest/v1/" + pathAndQuery, "PATCH", body.toString(), true, token, true);
     }
