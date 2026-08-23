@@ -10,6 +10,14 @@ public final class DriverRepository {
         return new JSONObject(ApiClient.authPost("/auth/v1/token?grant_type=password", new JSONObject().put("email", email).put("password", password)));
     }
 
+    public static JSONObject signUp(JSONObject body) throws Exception {
+        return new JSONObject(ApiClient.authPost("/auth/v1/signup", body));
+    }
+
+    public static JSONArray activeCities() throws Exception {
+        return new JSONArray(ApiClient.publicRestGet("cities?select=id,name,state&active=eq.true&order=name.asc"));
+    }
+
     public static String userId(String token) throws Exception {
         return new JSONObject(ApiClient.authGetUser(token)).optString("id", "");
     }
@@ -24,6 +32,14 @@ public final class DriverRepository {
         JSONArray rows = new JSONArray(ApiClient.restGet("drivers?select=status,online,rating&limit=1", token));
         if (rows.length() == 0) throw new Exception("Cadastro de motorista não encontrado.");
         return rows.getJSONObject(0);
+    }
+
+    public static String uploadAvatar(String token, String userId, byte[] jpeg) throws Exception {
+        String path = userId + "/profile.jpg";
+        ApiClient.storageUpload("driver-avatars", path, jpeg, "image/jpeg", token);
+        String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + path;
+        ApiClient.restPatch("profiles?id=eq." + userId, new JSONObject().put("avatar_url", publicUrl), token);
+        return publicUrl;
     }
 
     public static JSONObject wallet(String token) {

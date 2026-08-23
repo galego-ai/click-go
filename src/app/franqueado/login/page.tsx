@@ -22,6 +22,7 @@ export default function FranchiseLoginPage(){
    setMsg(role==='super_admin'?'Esta conta é da matriz. Entre pelo acesso Super Admin.':'Esta conta não é de administrador de franquia.')
    setBusy(false);return
   }
+  if(data.user.app_metadata?.must_change_password===true){window.location.href='/franqueado/trocar-senha-temporaria';return}
   window.location.href='/franqueado'
  }
 
