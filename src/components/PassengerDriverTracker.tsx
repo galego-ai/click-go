@@ -2,6 +2,7 @@
 
 import { useEffect,useRef,useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import PassengerRideSafety from '@/components/PassengerRideSafety'
 import 'leaflet/dist/leaflet.css'
 
 type Loc={lat:number;lng:number;heading:number|null;speed_kmh:number|null;updated_at:string}
@@ -47,14 +48,17 @@ export default function PassengerDriverTracker({rideId,driverId}:{rideId:string;
  },[loc,ride,route,cat,driver?.full_name])
  useEffect(()=>()=>{if(mapRef.current){mapRef.current.remove();mapRef.current=null}},[])
  const vehicle=[driver?.vehicle_make,driver?.vehicle_model,driver?.vehicle_year].filter(Boolean).join(' ')
- return <div style={{marginTop:4,background:'#0d0d0d',color:'#fff',border:'1px solid #292929',borderRadius:16,padding:10}}>
-  {driver&&<div style={{display:'grid',gridTemplateColumns:'64px 1fr auto',gap:12,alignItems:'center',padding:'5px 4px 12px'}}>
-   {driver.avatar_url?<img src={driver.avatar_url} alt="Foto do motorista" style={{width:60,height:60,borderRadius:'50%',objectFit:'cover',border:'2px solid #ffd400'}}/>:<div style={{width:60,height:60,borderRadius:'50%',background:'#222',display:'grid',placeItems:'center',fontSize:26,border:'2px solid #ffd400'}}>👤</div>}
-   <div><div style={{fontWeight:900,fontSize:18}}>{driver.full_name||'Motorista CLICK-GO'}</div><div style={{fontSize:13,color:'#d1d5db',marginTop:3}}>{vehicle||driver.vehicle_type||'Veículo'}{driver.vehicle_color?` · ${driver.vehicle_color}`:''}</div><div style={{fontSize:13,color:'#ffd400',marginTop:3,fontWeight:800}}>{driver.vehicle_plate||'Placa em atualização'}</div></div>
-   <div style={{textAlign:'right'}}><div style={{fontSize:18,fontWeight:900}}>★ {Number(driver.rating||0).toFixed(1)}</div><div style={{fontSize:11,color:'#9ca3af'}}>avaliação</div></div>
-  </div>}
-  <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'center'}}><b>Rastreamento em tempo real</b><span style={{fontSize:11,color:'#9ca3af'}}>rota: {provider==='mapbox'?'Mapbox':provider==='google'?'Google':'continuidade'}</span></div>
-  <div ref={mapEl} style={{height:320,borderRadius:12,overflow:'hidden',marginTop:9}}/>
-  <div style={{color:'#9ca3af',fontSize:12,marginTop:8}}>{msg}{loc?` · ${Number(loc.speed_kmh||0).toFixed(0)} km/h · atualização ${new Date(loc.updated_at).toLocaleTimeString('pt-BR')}`:''}</div>
+ return <div style={{display:'grid',gap:12}}>
+  <div style={{marginTop:4,background:'#0d0d0d',color:'#fff',border:'1px solid #292929',borderRadius:16,padding:10}}>
+   {driver&&<div style={{display:'grid',gridTemplateColumns:'64px 1fr auto',gap:12,alignItems:'center',padding:'5px 4px 12px'}}>
+    {driver.avatar_url?<img src={driver.avatar_url} alt="Foto do motorista" style={{width:60,height:60,borderRadius:'50%',objectFit:'cover',border:'2px solid #ffd400'}}/>:<div style={{width:60,height:60,borderRadius:'50%',background:'#222',display:'grid',placeItems:'center',fontSize:26,border:'2px solid #ffd400'}}>👤</div>}
+    <div><div style={{fontWeight:900,fontSize:18}}>{driver.full_name||'Motorista CLICK-GO'}</div><div style={{fontSize:13,color:'#d1d5db',marginTop:3}}>{vehicle||driver.vehicle_type||'Veículo'}{driver.vehicle_color?` · ${driver.vehicle_color}`:''}</div><div style={{fontSize:13,color:'#ffd400',marginTop:3,fontWeight:800}}>{driver.vehicle_plate||'Placa em atualização'}</div></div>
+    <div style={{textAlign:'right'}}><div style={{fontSize:18,fontWeight:900}}>★ {Number(driver.rating||0).toFixed(1)}</div><div style={{fontSize:11,color:'#9ca3af'}}>avaliação</div></div>
+   </div>}
+   <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'center'}}><b>Rastreamento em tempo real</b><span style={{fontSize:11,color:'#9ca3af'}}>rota: {provider==='mapbox'?'Mapbox':provider==='google'?'Google':'continuidade'}</span></div>
+   <div ref={mapEl} style={{height:320,borderRadius:12,overflow:'hidden',marginTop:9}}/>
+   <div style={{color:'#9ca3af',fontSize:12,marginTop:8}}>{msg}{loc?` · ${Number(loc.speed_kmh||0).toFixed(0)} km/h · atualização ${new Date(loc.updated_at).toLocaleTimeString('pt-BR')}`:''}</div>
+  </div>
+  <PassengerRideSafety rideId={rideId} status={ride?.status||''}/>
  </div>
 }
