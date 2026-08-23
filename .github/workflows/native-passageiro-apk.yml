@@ -75,6 +75,7 @@ jobs:
           python3 apply_passenger_push_v29.py
           python3 apply_passenger_push_v210_fix.py
           python3 apply_passenger_live_route_v211.py
+          python3 apply_passenger_v212_compat.py
           python3 apply_passenger_commercial_ui_v212.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
