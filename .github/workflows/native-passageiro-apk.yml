@@ -1,6 +1,13 @@
 name: Native Passageiro APK
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'android-native/passageiro/**'
+      - 'src/app/api/geocode/**'
+      - 'src/app/api/google-places/**'
+      - '.github/workflows/native-passageiro-apk.yml'
   pull_request:
     branches: [main]
     paths:
