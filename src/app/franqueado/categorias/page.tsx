@@ -8,18 +8,19 @@ type City={id:string;name:string;state:string}
 type Category={
  id:string;name:string;city_id:string;base_fare:number|string;price_per_km:number|string;price_per_minute:number|string;
  minimum_fare:number|string;cancellation_fee:number|string;dynamic_multiplier:number|string;active:boolean;locked_by_matrix:boolean;
- required_vehicle_type:string|null;icon_url:string|null;map_marker_url:string|null;wait_tolerance_minutes:number|string;waiting_fee_per_minute:number|string
+ required_vehicle_type:string|null;icon_url:string|null;map_marker_url:string|null;wait_tolerance_minutes:number|string;waiting_fee_per_minute:number|string;
+ route_deviation_threshold_m:number|string
 }
-type WaitDraft={tolerance:string;fee:string}
+type RuleDraft={tolerance:string;fee:string;deviation:string}
 const input:React.CSSProperties={width:'100%',background:'#0b0b0b',color:'#fff',border:'1px solid #333',borderRadius:10,padding:'11px 12px'}
 const btn:React.CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'11px 14px',fontWeight:800,cursor:'pointer'}
 const box:React.CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:18}
-const emptyForm={name:'',city_id:'',base_fare:'',price_per_km:'',price_per_minute:'',minimum_fare:'',cancellation_fee:'',dynamic_multiplier:'1',required_vehicle_type:'car',wait_tolerance_minutes:'5',waiting_fee_per_minute:'0.50'}
+const emptyForm={name:'',city_id:'',base_fare:'',price_per_km:'',price_per_minute:'',minimum_fare:'',cancellation_fee:'',dynamic_multiplier:'1',required_vehicle_type:'car',wait_tolerance_minutes:'5',waiting_fee_per_minute:'0.50',route_deviation_threshold_m:'800'}
 
 export default function CategoriasPage(){
  const[fid,setFid]=useState(''),[cities,setCities]=useState<City[]>([]),[items,setItems]=useState<Category[]>([]),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false),[marker,setMarker]=useState<File|null>(null)
  const[f,setF]=useState(emptyForm)
- const[waitDraft,setWaitDraft]=useState<Record<string,WaitDraft>>({})
+ const[ruleDraft,setRuleDraft]=useState<Record<string,RuleDraft>>({})
  useEffect(()=>{load()},[])
  async function load(){
   setBusy(true)
@@ -34,7 +35,7 @@ export default function CategoriasPage(){
    ])
    const cr=(fc.data||[]).map((x:any)=>x.cities).filter(Boolean);setCities(cr)
    const categories=(c.data||[]) as Category[];setItems(categories)
-   const drafts:Record<string,WaitDraft>={};for(const x of categories)drafts[x.id]={tolerance:String(x.wait_tolerance_minutes??5),fee:String(x.waiting_fee_per_minute??0.5)};setWaitDraft(drafts)
+   const drafts:Record<string,RuleDraft>={};for(const x of categories)drafts[x.id]={tolerance:String(x.wait_tolerance_minutes??5),fee:String(x.waiting_fee_per_minute??0.5),deviation:String(x.route_deviation_threshold_m??800)};setRuleDraft(drafts)
    if(cr[0])setF(v=>({...v,city_id:v.city_id||cr[0].id}))
   }catch(e:any){setMsg(e.message)}finally{setBusy(false)}
  }
@@ -49,26 +50,28 @@ export default function CategoriasPage(){
  }
  async function create(e:FormEvent){
   e.preventDefault();if(!fid)return
-  if(!validMoney(f.base_fare)||!validMoney(f.price_per_km)||!validMoney(f.price_per_minute)||!validMoney(f.minimum_fare)||!validMoney(f.cancellation_fee)||!validMoney(f.dynamic_multiplier)||Number(f.dynamic_multiplier)<1||!validMoney(f.waiting_fee_per_minute)||!Number.isInteger(Number(f.wait_tolerance_minutes))||Number(f.wait_tolerance_minutes)<0){setMsg('Preencha todas as tarifas e a regra de espera com valores válidos.');return}
+  const deviation=Number(f.route_deviation_threshold_m)
+  if(!validMoney(f.base_fare)||!validMoney(f.price_per_km)||!validMoney(f.price_per_minute)||!validMoney(f.minimum_fare)||!validMoney(f.cancellation_fee)||!validMoney(f.dynamic_multiplier)||Number(f.dynamic_multiplier)<1||!validMoney(f.waiting_fee_per_minute)||!Number.isInteger(Number(f.wait_tolerance_minutes))||Number(f.wait_tolerance_minutes)<0||!Number.isInteger(deviation)||deviation<100||deviation>5000){setMsg('Preencha tarifas, espera e limite de desvio com valores válidos.');return}
   setBusy(true)
   try{
    let markerUrl:string|null=null;if(marker)markerUrl=await upload(marker)
-   const{error}=await supabase.from('ride_categories').insert({franchise_id:fid,city_id:f.city_id,name:f.name.trim(),base_fare:Number(f.base_fare),price_per_km:Number(f.price_per_km),price_per_minute:Number(f.price_per_minute),minimum_fare:Number(f.minimum_fare),cancellation_fee:Number(f.cancellation_fee),dynamic_multiplier:Number(f.dynamic_multiplier),wait_tolerance_minutes:Number(f.wait_tolerance_minutes),waiting_fee_per_minute:Number(f.waiting_fee_per_minute),active:true,source:'franchise',locked_by_matrix:false,required_vehicle_type:f.required_vehicle_type||null,icon_url:markerUrl,map_marker_url:markerUrl})
+   const{error}=await supabase.from('ride_categories').insert({franchise_id:fid,city_id:f.city_id,name:f.name.trim(),base_fare:Number(f.base_fare),price_per_km:Number(f.price_per_km),price_per_minute:Number(f.price_per_minute),minimum_fare:Number(f.minimum_fare),cancellation_fee:Number(f.cancellation_fee),dynamic_multiplier:Number(f.dynamic_multiplier),wait_tolerance_minutes:Number(f.wait_tolerance_minutes),waiting_fee_per_minute:Number(f.waiting_fee_per_minute),route_deviation_threshold_m:deviation,active:true,source:'franchise',locked_by_matrix:false,required_vehicle_type:f.required_vehicle_type||null,icon_url:markerUrl,map_marker_url:markerUrl})
    if(error)throw error
-   setF(v=>({...emptyForm,city_id:v.city_id}));setMarker(null);setMsg('Categoria criada com regra de espera configurada.');await load()
+   setF(v=>({...emptyForm,city_id:v.city_id}));setMarker(null);setMsg('Categoria criada com regras de espera e segurança configuradas.');await load()
   }catch(e:any){setMsg(e.message||'Erro ao criar categoria.')}finally{setBusy(false)}
  }
  async function toggle(c:Category){if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela matriz.');const{error}=await supabase.from('ride_categories').update({active:!c.active}).eq('id',c.id);setMsg(error?error.message:'Categoria atualizada.');if(!error)await load()}
  async function replaceMarker(c:Category,file:File|null){if(!file)return;setBusy(true);try{const url=await upload(file,c.id);const{error}=await supabase.from('ride_categories').update({icon_url:url,map_marker_url:url}).eq('id',c.id);if(error)throw error;setMsg('Ícone do mapa atualizado.');await load()}catch(e:any){setMsg(e.message||'Erro ao atualizar ícone.')}finally{setBusy(false)}}
- async function saveWait(c:Category){
+ async function saveRules(c:Category){
   if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela matriz.')
-  const d=waitDraft[c.id];if(!d||!Number.isInteger(Number(d.tolerance))||Number(d.tolerance)<0||Number(d.tolerance)>120||!validMoney(d.fee)){setMsg('Tolerância deve ser de 0 a 120 minutos e a taxa deve ser um valor válido.');return}
+  const d=ruleDraft[c.id],deviation=Number(d?.deviation)
+  if(!d||!Number.isInteger(Number(d.tolerance))||Number(d.tolerance)<0||Number(d.tolerance)>120||!validMoney(d.fee)||!Number.isInteger(deviation)||deviation<100||deviation>5000){setMsg('Tolerância: 0–120 min; taxa: valor positivo; desvio: 100–5.000 metros.');return}
   setBusy(true)
-  const{error}=await supabase.from('ride_categories').update({wait_tolerance_minutes:Number(d.tolerance),waiting_fee_per_minute:Number(d.fee)}).eq('id',c.id)
-  setBusy(false);setMsg(error?error.message:'Regra de espera atualizada.');if(!error)await load()
+  const{error}=await supabase.from('ride_categories').update({wait_tolerance_minutes:Number(d.tolerance),waiting_fee_per_minute:Number(d.fee),route_deviation_threshold_m:deviation}).eq('id',c.id)
+  setBusy(false);setMsg(error?error.message:'Regras de espera e segurança atualizadas.');if(!error)await load()
  }
  return <main style={{minHeight:'100vh',background:'#080808',color:'#fff',padding:24}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><div><div style={{color:'#ffd400',fontWeight:900}}>CLICK-GO</div><h1>Categorias de corrida</h1><p style={{color:'#9ca3af'}}>Defina preços, tipo do veículo, tolerância de espera no embarque e a cobrança por minuto após a tolerância.</p></div><Link href="/franqueado" style={{...btn,textDecoration:'none'}}>Painel do franqueado</Link></div>
+  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><div><div style={{color:'#ffd400',fontWeight:900}}>CLICK-GO</div><h1>Categorias de corrida</h1><p style={{color:'#9ca3af'}}>Defina preços, tolerância de espera, cobrança após tolerância e o limite para alerta de desvio de rota.</p></div><Link href="/franqueado" style={{...btn,textDecoration:'none'}}>Painel do franqueado</Link></div>
   {msg&&<div style={{...box,borderColor:'#665600',color:'#ffe66b',marginBottom:16}}>{msg}</div>}
   <div style={{display:'grid',gridTemplateColumns:'380px 1fr',gap:16}}>
    <form onSubmit={create} style={box}><h2>Nova categoria</h2><div style={{display:'grid',gap:9}}>
@@ -82,16 +85,17 @@ export default function CategoriasPage(){
     <input required type="number" min="0" step="0.01" placeholder="Tarifa mínima (R$)" style={input} value={f.minimum_fare} onChange={e=>setF({...f,minimum_fare:e.target.value})}/>
     <input required type="number" min="0" step="0.01" placeholder="Taxa de cancelamento (R$)" style={input} value={f.cancellation_fee} onChange={e=>setF({...f,cancellation_fee:e.target.value})}/>
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:9}}><label style={{fontSize:12,color:'#9ca3af'}}>Tolerância de espera (min)<input required type="number" min="0" max="120" step="1" style={{...input,marginTop:5}} value={f.wait_tolerance_minutes} onChange={e=>setF({...f,wait_tolerance_minutes:e.target.value})}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Taxa após tolerância (R$/min)<input required type="number" min="0" step="0.01" style={{...input,marginTop:5}} value={f.waiting_fee_per_minute} onChange={e=>setF({...f,waiting_fee_per_minute:e.target.value})}/></label></div>
+    <label style={{fontSize:12,color:'#9ca3af'}}>Alerta de desvio a partir de (metros)<input required type="number" min="100" max="5000" step="50" style={{...input,marginTop:5}} value={f.route_deviation_threshold_m} onChange={e=>setF({...f,route_deviation_threshold_m:e.target.value})}/></label>
     <label style={{fontSize:12,color:'#9ca3af'}}>Multiplicador dinâmico<input required type="number" min="1" step="0.01" style={{...input,marginTop:5}} value={f.dynamic_multiplier} onChange={e=>setF({...f,dynamic_multiplier:e.target.value})}/></label>
     <button disabled={busy} style={btn}>{busy?'Salvando...':'Criar categoria'}</button>
    </div></form>
    <section style={box}><h2>Categorias cadastradas</h2><div style={{display:'grid',gap:10}}>{items.map(c=>{
-    const d=waitDraft[c.id]||{tolerance:String(c.wait_tolerance_minutes??5),fee:String(c.waiting_fee_per_minute??0.5)}
+    const d=ruleDraft[c.id]||{tolerance:String(c.wait_tolerance_minutes??5),fee:String(c.waiting_fee_per_minute??0.5),deviation:String(c.route_deviation_threshold_m??800)}
     return <div key={c.id} style={{...box,padding:13}}><div style={{display:'grid',gridTemplateColumns:'58px 1fr auto',gap:12,alignItems:'center'}}>
      <div>{c.map_marker_url||c.icon_url?<img src={c.map_marker_url||c.icon_url||''} alt="Marcador" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid #ffd400'}}/>:<div style={{width:52,height:52,borderRadius:'50%',background:'#222',display:'grid',placeItems:'center',fontSize:26}}>🚗</div>}</div>
      <div><b>{c.name}</b><div style={{color:'#9ca3af',fontSize:13}}>Base R$ {Number(c.base_fare).toFixed(2)} · km R$ {Number(c.price_per_km).toFixed(2)} · min R$ {Number(c.price_per_minute).toFixed(2)} · mínima R$ {Number(c.minimum_fare).toFixed(2)}</div><label style={{display:'inline-block',marginTop:8,fontSize:12,color:'#ffd400',cursor:'pointer'}}>Trocar ícone do mapa <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" hidden onChange={e=>replaceMarker(c,e.target.files?.[0]||null)}/></label></div>
      <button disabled={c.locked_by_matrix} style={{...btn,background:c.active?'#333':'#ffd400',color:c.active?'#fff':'#000'}} onClick={()=>toggle(c)}>{c.locked_by_matrix?'Bloqueada pela matriz':c.active?'Desativar':'Ativar'}</button>
-    </div><div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #292929',display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:9,alignItems:'end'}}><label style={{fontSize:12,color:'#9ca3af'}}>Tolerância no embarque (min)<input type="number" min="0" max="120" step="1" style={{...input,marginTop:5}} value={d.tolerance} onChange={e=>setWaitDraft(v=>({...v,[c.id]:{...d,tolerance:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Cobrança após tolerância (R$/min)<input type="number" min="0" step="0.01" style={{...input,marginTop:5}} value={d.fee} onChange={e=>setWaitDraft(v=>({...v,[c.id]:{...d,fee:e.target.value}}))}/></label><button disabled={busy||c.locked_by_matrix} style={btn} onClick={()=>saveWait(c)}>Salvar espera</button></div></div>
+    </div><div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #292929',display:'grid',gridTemplateColumns:'1fr 1fr 1fr auto',gap:9,alignItems:'end'}}><label style={{fontSize:12,color:'#9ca3af'}}>Tolerância no embarque (min)<input type="number" min="0" max="120" step="1" style={{...input,marginTop:5}} value={d.tolerance} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,tolerance:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Cobrança após tolerância (R$/min)<input type="number" min="0" step="0.01" style={{...input,marginTop:5}} value={d.fee} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,fee:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Alerta de desvio (m)<input type="number" min="100" max="5000" step="50" style={{...input,marginTop:5}} value={d.deviation} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,deviation:e.target.value}}))}/></label><button disabled={busy||c.locked_by_matrix} style={btn} onClick={()=>saveRules(c)}>Salvar regras</button></div></div>
    })}{!items.length&&<div>Nenhuma categoria cadastrada.</div>}</div></section>
   </div>
  </div></main>
