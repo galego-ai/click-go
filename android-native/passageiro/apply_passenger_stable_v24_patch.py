@@ -49,11 +49,11 @@ elif 'nearbyDriversSeq++;\n        releaseMap();' not in text:
 # mostra apenas classe + primeiro ponto do app no stack, suficiente para localizar
 # um eventual fechamento restante durante esta fase de testes.
 if 'private void installLocalCrashDiagnostic()' not in text:
-    oncreate_anchor = '''    @Override protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n'''
-    oncreate_new = '''    @Override protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        installLocalCrashDiagnostic();\n'''
-    if oncreate_anchor not in text:
-        raise SystemExit('onCreate não encontrado para diagnóstico')
-    text = text.replace(oncreate_anchor, oncreate_new, 1)
+    oncreate_pattern = re.compile(r'''(\s*@Override\s+public\s+void\s+onCreate\(Bundle\s+savedInstanceState\)\s*\{\s*\n\s*super\.onCreate\(savedInstanceState\);)''')
+    m_oncreate = oncreate_pattern.search(text)
+    if not m_oncreate:
+        raise SystemExit('onCreate público não encontrado para diagnóstico')
+    text = text[:m_oncreate.end()] + '\n        installLocalCrashDiagnostic();' + text[m_oncreate.end():]
 
     method_anchor = '''    private void showLogin() {\n'''
     diagnostic_methods = r'''    private void installLocalCrashDiagnostic() {
