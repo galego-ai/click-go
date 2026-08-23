@@ -16,7 +16,7 @@ export default function PassengerRideSafety({rideId,status}:{rideId:string;statu
  useEffect(()=>{void load()},[status])
  async function load(){await Promise.all([loadSafety(),loadAlerts()])}
  async function loadSafety(){const{data,error}=await supabase.rpc('get_passenger_ride_safety',{p_ride_id:rideId});if(!error&&data)setSafety(data as Safety)}
- async function loadAlerts(){const{data,error}=await supabase.rpc('get_ride_safety_alerts',{p_ride_id:rideId});if(!error)setAlerts(Array.isArray(data)?data as Alert:[])}
+ async function loadAlerts(){const{data,error}=await supabase.rpc('get_ride_safety_alerts',{p_ride_id:rideId});if(!error)setAlerts(Array.isArray(data)?data as Alert[]:[])}
  function getPosition():Promise<GeolocationPosition|null>{return new Promise(resolve=>{if(!navigator.geolocation)return resolve(null);navigator.geolocation.getCurrentPosition(resolve,()=>resolve(null),{enableHighAccuracy:true,timeout:7000,maximumAge:5000})})}
  async function saveContact(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setMsg('')
