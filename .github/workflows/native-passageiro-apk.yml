@@ -63,6 +63,7 @@ jobs:
           python3 apply_category_crash_fix_v23.py
           python3 apply_passenger_stable_v24_patch.py
           python3 apply_passenger_stable_dispatch_v25.py
+          python3 apply_passenger_stable_dispatch_v25_compile_fix.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
