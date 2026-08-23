@@ -56,15 +56,16 @@ jobs:
           python3 apply_driver_arrival_wait_v16.py
           python3 apply_full_route_history_v17.py
           python3 apply_driver_safety_v18.py
+          python3 apply_driver_taximeter_v19.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v1.8-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v1.9-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v1.8-prime
-          path: apk-output/CLICK-GO-Motorista-native-v1.8-prime.apk
+          name: CLICK-GO-Motorista-native-v1.9-prime
+          path: apk-output/CLICK-GO-Motorista-native-v1.9-prime.apk
           if-no-files-found: error
