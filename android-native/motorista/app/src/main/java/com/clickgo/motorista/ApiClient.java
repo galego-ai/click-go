@@ -25,6 +25,10 @@ public final class ApiClient {
         return request(BuildConfig.SUPABASE_URL + "/rest/v1/rpc/" + function, "POST", body.toString(), true, token, true);
     }
 
+    public static String publicRpc(String function, JSONObject body) throws Exception {
+        return request(BuildConfig.SUPABASE_URL + "/rest/v1/rpc/" + function, "POST", body.toString(), false, null, true);
+    }
+
     public static String restGet(String pathAndQuery, String token) throws Exception {
         return request(BuildConfig.SUPABASE_URL + "/rest/v1/" + pathAndQuery, "GET", null, true, token, true);
     }
@@ -73,7 +77,7 @@ public final class ApiClient {
             connection.setReadTimeout(10000);
             connection.setUseCaches(false);
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("User-Agent", "CLICK-GO-Motorista-Android/0.4");
+            connection.setRequestProperty("User-Agent", "CLICK-GO-Motorista-Android/0.6");
             if (apiKey) connection.setRequestProperty("apikey", BuildConfig.SUPABASE_KEY);
             if (auth && token != null && !token.isBlank()) connection.setRequestProperty("Authorization", "Bearer " + token);
             if (body != null) {
