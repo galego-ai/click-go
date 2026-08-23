@@ -1,0 +1,2 @@
+Validação temporária do build CLICK-GO Motorista v2.3 PRIME.
+Revalidação após preservar cadastro e foto.
