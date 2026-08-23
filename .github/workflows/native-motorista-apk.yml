@@ -37,6 +37,7 @@ jobs:
           python3 apply_login_stability_patch.py
           python3 apply_recovery_routing_patch.py
           python3 apply_registration_photo_patch.py
+          python3 apply_registration_imports_patch.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
