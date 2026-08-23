@@ -35,10 +35,31 @@ public final class DriverRepository {
     }
 
     public static String uploadAvatar(String token, String userId, byte[] jpeg) throws Exception {
-        String path = userId + "/profile.jpg";
-        ApiClient.storageUpload("driver-avatars", path, jpeg, "image/jpeg", token);
-        String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + path;
+        String avatarPath = userId + "/profile.jpg";
+        String documentPath = userId + "/profile_photo.jpg";
+        ApiClient.storageUpload("driver-avatars", avatarPath, jpeg, "image/jpeg", token);
+        ApiClient.storageUpload("driver-documents", documentPath, jpeg, "image/jpeg", token);
+        String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + avatarPath;
         ApiClient.restPatch("profiles?id=eq." + userId, new JSONObject().put("avatar_url", publicUrl), token);
+
+        JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq.profile_photo&select=id&order=created_at.desc&limit=1", token));
+        if (existing.length() == 0) {
+            ApiClient.restPost("driver_documents", new JSONObject()
+                    .put("driver_id", userId)
+                    .put("document_type", "profile_photo")
+                    .put("file_path", documentPath)
+                    .put("status", "pending"), token);
+        } else {
+            String docId = existing.getJSONObject(0).optString("id", "");
+            if (!docId.isBlank()) {
+                ApiClient.restPatch("driver_documents?id=eq." + docId, new JSONObject()
+                        .put("file_path", documentPath)
+                        .put("status", "pending")
+                        .put("rejection_reason", JSONObject.NULL)
+                        .put("reviewed_by", JSONObject.NULL)
+                        .put("reviewed_at", JSONObject.NULL), token);
+            }
+        }
         return publicUrl;
     }
 
