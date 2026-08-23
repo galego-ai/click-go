@@ -14,11 +14,11 @@ if 'public static JSONArray taximeterCategories' not in repo:
     repo=repo.replace(repo_anchor,repo_methods,1)
 repo_path.write_text(repo,encoding='utf-8')
 
-# Estado da tela de taxímetro.
-field_anchor='''    private double safetyThresholdM = 100.0;\n'''
-field_extra='''    private double safetyThresholdM = 100.0;\n    private Runnable taximeterPoll;\n    private String taximeterSessionId = "";\n'''
+# Estado da tela de taxímetro. Não depende mais do antigo módulo PIN/SOS.
+field_anchor='''    private boolean showMoney = true;\n'''
+field_extra='''    private boolean showMoney = true;\n    private Runnable taximeterPoll;\n    private String taximeterSessionId = "";\n'''
 if 'private Runnable taximeterPoll;' not in text:
-    if field_anchor not in text: raise SystemExit('campo safetyThresholdM não encontrado')
+    if field_anchor not in text: raise SystemExit('campo showMoney não encontrado')
     text=text.replace(field_anchor,field_extra,1)
 
 # Entra no menu principal do motorista.
@@ -118,4 +118,4 @@ if m: build=build[:m.start(1)]+str(int(m.group(1))+1)+build[m.end(1):]
 build=re.sub(r"versionName\s+'[^']+'","versionName '1.9-prime'",build,count=1)
 build_path.write_text(build,encoding='utf-8')
 main_path.write_text(text,encoding='utf-8')
-print('Motorista v1.9 PRIME: taxímetro/maçaneta livre integrado ao menu.')
+print('Motorista v1.9 PRIME: taxímetro/maçaneta livre integrado ao menu sem dependência do módulo PIN/SOS.')
