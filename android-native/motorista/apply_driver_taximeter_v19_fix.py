@@ -18,6 +18,11 @@ text=text.replace(
     'taximeterMeta(r.optDouble("distance_m",0),r.optInt("elapsed_seconds",0),multiplier)',
     1
 )
+text=text.replace(
+    'taximeterSessionId=result.optString("session_id","");ui.post',
+    'taximeterSessionId=result.optString("session_id","");online=false;ui.post',
+    1
+)
 
 path.write_text(text,encoding='utf-8')
-print('Taxímetro v1.9: multiplicador mantido nas atualizações ao vivo.')
+print('Taxímetro v1.9: multiplicador ao vivo e motorista offline durante maçaneta OCUPADO.')
