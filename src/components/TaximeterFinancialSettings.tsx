@@ -18,6 +18,7 @@ type Settings = {
   effective_source: 'global' | 'franchise'
   can_edit: boolean
 }
+type Franchise = { id: string; trade_name: string | null; legal_name: string | null }
 
 const box: React.CSSProperties = { background: '#141414', border: '1px solid #292929', borderRadius: 16, padding: 16 }
 const field: React.CSSProperties = { background: '#0b0b0b', color: '#fff', border: '1px solid #333', borderRadius: 9, padding: '10px 11px' }
@@ -27,18 +28,34 @@ const describeRule = (mode: FeeMode, value: unknown) => mode === 'none' ? 'Sem t
 
 export default function TaximeterFinancialSettings({ network = false }: { network?: boolean }) {
   const [settings, setSettings] = useState<Settings | null>(null)
+  const [franchises, setFranchises] = useState<Franchise[]>([])
+  const [target, setTarget] = useState('global')
   const [mode, setMode] = useState<FeeMode>('none')
   const [value, setValue] = useState('0')
   const [allowOverride, setAllowOverride] = useState(true)
+  const [lockedByMatrix, setLockedByMatrix] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => {
+    if (network) void loadFranchises()
+    void load('global')
+  }, [])
 
-  async function load() {
+  async function loadFranchises() {
+    const { data, error } = await supabase.from('franchises').select('id,trade_name,legal_name').is('deleted_at', null).order('trade_name', { ascending: true })
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+    setFranchises((data || []) as Franchise[])
+  }
+
+  async function load(nextTarget = target) {
     setBusy(true)
     setMessage('')
-    const { data, error } = await supabase.rpc('get_taximeter_financial_settings', { p_franchise_id: null })
+    const franchiseId = network && nextTarget !== 'global' ? nextTarget : null
+    const { data, error } = await supabase.rpc('get_taximeter_financial_settings', { p_franchise_id: franchiseId })
     setBusy(false)
     if (error) {
       setMessage(error.message)
@@ -47,15 +64,21 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
 
     const next = data as Settings
     setSettings(next)
-    if (network) {
+    setAllowOverride(next.allow_franchise_override !== false)
+    setLockedByMatrix(Boolean(next.override_locked_by_matrix))
+
+    if (network && nextTarget === 'global') {
       setMode(next.global_fee_mode || 'none')
       setValue(String(next.global_fee_value || 0))
-      setAllowOverride(next.allow_franchise_override !== false)
     } else {
       setMode((next.override_exists ? next.override_fee_mode : next.effective_fee_mode) || 'none')
       setValue(String(next.override_exists ? next.override_fee_value : next.effective_fee_value || 0))
-      setAllowOverride(next.allow_franchise_override !== false)
     }
+  }
+
+  async function changeTarget(nextTarget: string) {
+    setTarget(nextTarget)
+    await load(nextTarget)
   }
 
   async function save() {
@@ -74,15 +97,17 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
       return
     }
 
+    const matrixGlobal = network && target === 'global'
+    const matrixFranchise = network && target !== 'global'
     setBusy(true)
     setMessage('Salvando configuração...')
     const { error } = await supabase.rpc('set_taximeter_financial_settings', {
       p_fee_mode: mode,
       p_fee_value: numericValue,
-      p_scope: network ? 'global' : 'franchise',
-      p_franchise_id: null,
-      p_allow_franchise_override: network ? allowOverride : true,
-      p_locked_by_matrix: false,
+      p_scope: matrixGlobal ? 'global' : 'franchise',
+      p_franchise_id: matrixFranchise ? target : null,
+      p_allow_franchise_override: matrixGlobal ? allowOverride : true,
+      p_locked_by_matrix: matrixFranchise ? lockedByMatrix : false,
     })
     setBusy(false)
 
@@ -91,12 +116,14 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
       return
     }
 
-    setMessage(network ? 'Regra financeira da matriz atualizada.' : 'Regra financeira da franquia atualizada.')
-    await load()
+    setMessage(matrixGlobal ? 'Regra padrão da rede atualizada.' : matrixFranchise ? 'Regra específica da franquia atualizada pela matriz.' : 'Regra financeira da franquia atualizada.')
+    await load(target)
   }
 
   if (!settings && busy) return <div style={box}>Carregando configuração financeira do taxímetro…</div>
 
+  const matrixGlobal = network && target === 'global'
+  const matrixFranchise = network && target !== 'global'
   const disabled = busy || (!network && !settings?.can_edit)
   const effectiveMode = settings?.effective_fee_mode || 'none'
   const effectiveValue = settings?.effective_fee_value || 0
@@ -108,7 +135,7 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
         <h2 style={{ margin: '4px 0 0' }}>Taxa das corridas livres</h2>
         <p style={{ color: '#9ca3af', fontSize: 13, margin: '6px 0 0' }}>
           {network
-            ? 'Defina a regra padrão da rede. Começa sem cobrança e só passa a descontar depois que você configurar.'
+            ? 'A matriz pode definir o padrão da rede ou sobrescrever uma franquia específica. A configuração inicial continua sem cobrança.'
             : 'A taxa é descontada da carteira operacional quando houver saldo; sem saldo, vira pendência e não bloqueia a corrida.'}
         </p>
       </div>
@@ -116,6 +143,14 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
         Efetiva: {describeRule(effectiveMode, effectiveValue)}
       </div>
     </div>
+
+    {network ? <label style={{ display: 'grid', gap: 5, fontSize: 12, color: '#9ca3af', marginTop: 14 }}>
+      Aplicar configuração em
+      <select disabled={busy} value={target} onChange={event => void changeTarget(event.target.value)} style={field}>
+        <option value="global">🌐 Padrão de toda a rede</option>
+        {franchises.map(franchise => <option key={franchise.id} value={franchise.id}>🏢 {franchise.trade_name || franchise.legal_name || franchise.id.slice(0, 8)}</option>)}
+      </select>
+    </label> : null}
 
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(190px,1fr) minmax(150px,220px) auto', gap: 10, alignItems: 'end', marginTop: 14 }}>
       <label style={{ display: 'grid', gap: 5, fontSize: 12, color: '#9ca3af' }}>
@@ -137,17 +172,23 @@ export default function TaximeterFinancialSettings({ network = false }: { networ
       </button>
     </div>
 
-    {network ? (
-      <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, fontSize: 13, color: '#d1d5db' }}>
-        <input type="checkbox" checked={allowOverride} onChange={event => setAllowOverride(event.target.checked)} />
-        <span>Permitir que cada franqueado defina sua própria taxa do taxímetro. Se desmarcado, prevalece a regra da matriz.</span>
+    {matrixGlobal ? <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 12, fontSize: 13, color: '#d1d5db' }}>
+      <input type="checkbox" checked={allowOverride} onChange={event => setAllowOverride(event.target.checked)} />
+      <span>Permitir que cada franqueado defina sua própria taxa. Desmarcando, todas as franquias passam a obedecer à regra da matriz, exceto sobrescritas específicas travadas pela própria matriz.</span>
+    </label> : null}
+
+    {matrixFranchise ? <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: '#d1d5db' }}>
+        <input type="checkbox" checked={lockedByMatrix} onChange={event => setLockedByMatrix(event.target.checked)} />
+        <span>🔒 Travar esta regra pela matriz — o franqueado não poderá alterá-la.</span>
       </label>
-    ) : (
-      <div style={{ marginTop: 12, fontSize: 12, color: settings?.can_edit ? '#9ca3af' : '#fbbf24' }}>
-        {settings?.effective_source === 'franchise' ? 'A franquia está usando uma regra própria.' : 'A franquia está herdando a regra da matriz.'}
-        {!settings?.can_edit ? ' A matriz bloqueou alterações locais.' : ''}
-      </div>
-    )}
+      <div style={{ fontSize: 12, color: '#9ca3af' }}>{settings?.override_exists ? 'Existe uma sobrescrita específica para esta franquia.' : 'Ainda não existe sobrescrita: a franquia está usando a regra herdada.'}</div>
+    </div> : null}
+
+    {!network ? <div style={{ marginTop: 12, fontSize: 12, color: settings?.can_edit ? '#9ca3af' : '#fbbf24' }}>
+      {settings?.effective_source === 'franchise' ? 'A franquia está usando uma regra própria.' : 'A franquia está herdando a regra da matriz.'}
+      {!settings?.can_edit ? ' A matriz bloqueou alterações locais.' : ''}
+    </div> : null}
 
     {message ? <div style={{ marginTop: 10, fontSize: 12, color: '#ffe66b' }}>{message}</div> : null}
   </section>
