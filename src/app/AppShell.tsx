@@ -21,7 +21,7 @@ const groups = [
   { title: 'Tarifas e áreas', items: [['Tarifas & Categorias','/tarifas'],['Regiões & Áreas','/regioes']] },
   { title: 'Pagamentos', items: [['Pagamentos','/pagamentos'],['Pagamentos & Carteira','/configuracoes-pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
   { title: 'Marketing e gestão', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners'],['Auditoria & Logs','/auditoria']] },
-  { title: 'Aplicativos', items: [['App Passageiro','/passageiro'],['App Motorista','/motorista-app'],['Painel Franqueado','/franqueado/login']] },
+  { title: 'Aplicativos', items: [['Push Android','/notificacoes-push'],['App Passageiro','/passageiro'],['App Motorista','/motorista-app'],['Painel Franqueado','/franqueado/login']] },
 ]
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
