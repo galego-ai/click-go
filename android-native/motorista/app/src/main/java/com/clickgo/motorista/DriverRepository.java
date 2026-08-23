@@ -23,13 +23,13 @@ public final class DriverRepository {
     }
 
     public static JSONObject profile(String token) throws Exception {
-        JSONArray rows = new JSONArray(ApiClient.restGet("profiles?select=full_name,email,avatar_url&limit=1", token));
+        JSONArray rows = new JSONArray(ApiClient.restGet("profiles?select=full_name,email,phone,avatar_url&limit=1", token));
         if (rows.length() == 0) throw new Exception("Perfil do motorista não encontrado.");
         return rows.getJSONObject(0);
     }
 
     public static JSONObject driver(String token) throws Exception {
-        JSONArray rows = new JSONArray(ApiClient.restGet("drivers?select=status,online,rating&limit=1", token));
+        JSONArray rows = new JSONArray(ApiClient.restGet("drivers?select=status,online,rating,franchise_id,city_id,has_card_machine,card_machine_approved&limit=1", token));
         if (rows.length() == 0) throw new Exception("Cadastro de motorista não encontrado.");
         return rows.getJSONObject(0);
     }
@@ -58,6 +58,39 @@ public final class DriverRepository {
             JSONArray rows = new JSONArray(ApiClient.rpc("get_my_driver_wallet_summary", new JSONObject(), token));
             return rows.length() > 0 ? rows.getJSONObject(0) : new JSONObject();
         } catch (Exception ignored) { return new JSONObject(); }
+    }
+
+    public static JSONObject billing(String token) throws Exception {
+        JSONArray rows = new JSONArray(ApiClient.restGet("driver_billing_settings?select=billing_mode,per_ride_fee,monthly_fee,monthly_due_day,monthly_paid_until,active&limit=1", token));
+        return rows.length() > 0 ? rows.getJSONObject(0) : new JSONObject();
+    }
+
+    public static JSONArray rideHistory(String token, String userId) throws Exception {
+        return new JSONArray(ApiClient.restGet("rides?driver_id=eq." + userId + "&status=in.(completed,cancelled)&select=id,status,origin_label,destination_label,estimated_fare,final_fare,requested_at,completed_at,cancelled_at&order=requested_at.desc&limit=50", token));
+    }
+
+    public static JSONArray documents(String token, String userId) throws Exception {
+        return new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&select=id,document_type,status,rejection_reason,created_at&order=created_at.desc", token));
+    }
+
+    public static JSONArray supportTickets(String token, String userId) throws Exception {
+        return new JSONArray(ApiClient.restGet("support_tickets?requester_id=eq." + userId + "&select=id,subject,status,description,created_at&order=created_at.desc&limit=50", token));
+    }
+
+    public static void createSupportTicket(String token, String userId, String subject, String description) throws Exception {
+        JSONObject d = driver(token);
+        String franchiseId = d.optString("franchise_id", "");
+        String cityId = d.optString("city_id", "");
+        JSONObject body = new JSONObject()
+                .put("requester_id", userId)
+                .put("franchise_id", franchiseId.isBlank() ? JSONObject.NULL : franchiseId)
+                .put("city_id", cityId.isBlank() ? JSONObject.NULL : cityId)
+                .put("subject", subject)
+                .put("category", "motorista")
+                .put("priority", "normal")
+                .put("status", "open")
+                .put("description", description);
+        ApiClient.restPost("support_tickets", body, token);
     }
 
     public static void setOnline(String token, boolean online, Double lat, Double lng) throws Exception {
