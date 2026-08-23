@@ -12,6 +12,7 @@ const items=[
  ['/franqueado/cancelamentos','Cancelamentos'],
  ['/franqueado/operacao','Operação'],
  ['/franqueado/carteiras','Carteiras'],
+ ['/franqueado/taxas','Taxas R$/%'],
  ['/franqueado/pagamentos','Pagamentos'],
  ['/franqueado/anuncios','Anúncios'],
  ['/franqueado/repasse','Repasses'],
