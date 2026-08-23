@@ -380,7 +380,7 @@ export default function DriverOperationPage() {
     lastBroadcastAtRef.current = nowMs
     lastBroadcastPointRef.current = nextLocation
 
-    const sends: Promise<'ok' | 'timed out' | 'error'>[] = []
+    const sends: Promise<unknown>[] = []
     if (cityGpsReadyRef.current && cityGpsChannelRef.current) {
       sends.push(cityGpsChannelRef.current.send({ type: 'broadcast', event: 'location', payload }))
     }
