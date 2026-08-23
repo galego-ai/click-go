@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect,useState } from 'react'
+import { FormEvent,useEffect,useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type Contact={id:string;name:string;phone:string;relationship:string|null}
@@ -8,15 +8,23 @@ type Safety={pin:string|null;pin_verified_at:string|null;primary_contact:Contact
 type Alert={id:string;alert_type:string;severity:string;reporter_role:string;message:string|null;distance_from_route_m:number|null;status:string;created_at:string}
 const panel:React.CSSProperties={background:'#fff',border:'1px solid #e5e7eb',borderRadius:18,padding:15,color:'#111'}
 const btn:React.CSSProperties={border:0,borderRadius:13,padding:'12px 14px',fontWeight:900,cursor:'pointer'}
+const input:React.CSSProperties={width:'100%',border:'1px solid #ddd',borderRadius:10,padding:'10px 11px',background:'#fff',color:'#111'}
 
 export default function PassengerRideSafety({rideId,status}:{rideId:string;status:string}){
- const[safety,setSafety]=useState<Safety|null>(null),[alerts,setAlerts]=useState<Alert[]>([]),[busy,setBusy]=useState(false),[msg,setMsg]=useState('')
+ const[safety,setSafety]=useState<Safety|null>(null),[alerts,setAlerts]=useState<Alert[]>([]),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[showContactForm,setShowContactForm]=useState(false)
  useEffect(()=>{void load();const t=window.setInterval(loadAlerts,10000);return()=>window.clearInterval(t)},[rideId])
  useEffect(()=>{void load()},[status])
  async function load(){await Promise.all([loadSafety(),loadAlerts()])}
  async function loadSafety(){const{data,error}=await supabase.rpc('get_passenger_ride_safety',{p_ride_id:rideId});if(!error&&data)setSafety(data as Safety)}
  async function loadAlerts(){const{data,error}=await supabase.rpc('get_ride_safety_alerts',{p_ride_id:rideId});if(!error)setAlerts(Array.isArray(data)?data as Alert:[])}
  function getPosition():Promise<GeolocationPosition|null>{return new Promise(resolve=>{if(!navigator.geolocation)return resolve(null);navigator.geolocation.getCurrentPosition(resolve,()=>resolve(null),{enableHighAccuracy:true,timeout:7000,maximumAge:5000})})}
+ async function saveContact(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();setBusy(true);setMsg('')
+  const f=new FormData(e.currentTarget),name=String(f.get('name')||'').trim(),phone=String(f.get('phone')||'').trim(),relationship=String(f.get('relationship')||'').trim()
+  const{data:{user}}=await supabase.auth.getUser();if(!user){setBusy(false);setMsg('Faça login novamente.');return}
+  const{error}=await supabase.from('user_emergency_contacts').insert({owner_id:user.id,name,phone,relationship:relationship||null,is_primary:true,active:true})
+  setBusy(false);if(error){setMsg(error.message);return}setShowContactForm(false);setMsg('Contato de segurança cadastrado.');await loadSafety()
+ }
  async function sos(){
   if(!window.confirm('Acionar o SOS desta corrida? Este evento será registrado com sua localização quando disponível.'))return
   setBusy(true);setMsg('Registrando alerta de segurança...')
@@ -33,7 +41,7 @@ export default function PassengerRideSafety({rideId,status}:{rideId:string;statu
   <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><div><b style={{fontSize:17}}>🛡️ Segurança da corrida</b><div style={{fontSize:12,color:'#666',marginTop:3}}>PIN de embarque, SOS e alertas do trajeto.</div></div><button disabled={busy} onClick={sos} style={{...btn,background:'#b91c1c',color:'#fff'}}>SOS</button></div>
   {pinVisible&&<div style={{background:'#111',color:'#fff',borderRadius:14,padding:14,textAlign:'center'}}><div style={{fontSize:12,color:'#d1d5db',fontWeight:800}}>PIN PARA INICIAR A CORRIDA</div><div style={{fontSize:34,fontWeight:950,letterSpacing:9,color:'#ffd400',marginTop:5}}>{safety?.pin||'••••'}</div><div style={{fontSize:12,color:'#d1d5db',marginTop:5}}>Informe estes 4 dígitos ao motorista somente depois de conferir motorista, foto, veículo e placa.</div></div>}
   {safety?.pin_verified_at&&<div style={{background:'#ecfdf5',border:'1px solid #a7f3d0',borderRadius:12,padding:10,color:'#065f46',fontWeight:800}}>✓ PIN confirmado — embarque validado.</div>}
-  {safety?.primary_contact&&<div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'center',background:'#f8fafc',borderRadius:12,padding:10}}><div><b>{safety.primary_contact.name}</b><div style={{fontSize:12,color:'#666'}}>{safety.primary_contact.relationship||'Contato de segurança'} · {safety.primary_contact.phone}</div></div><a href={`tel:${safety.primary_contact.phone.replace(/[^0-9+]/g,'')}`} style={{...btn,background:'#111',color:'#fff',textDecoration:'none',padding:'9px 11px'}}>Ligar</a></div>}
+  {safety?.primary_contact?<div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'center',background:'#f8fafc',borderRadius:12,padding:10}}><div><b>{safety.primary_contact.name}</b><div style={{fontSize:12,color:'#666'}}>{safety.primary_contact.relationship||'Contato de segurança'} · {safety.primary_contact.phone}</div></div><a href={`tel:${safety.primary_contact.phone.replace(/[^0-9+]/g,'')}`} style={{...btn,background:'#111',color:'#fff',textDecoration:'none',padding:'9px 11px'}}>Ligar</a></div>:<div style={{background:'#fff8db',border:'1px solid #f2d76b',borderRadius:12,padding:11}}><b>Contato de segurança não cadastrado</b><div style={{fontSize:12,color:'#665',marginTop:4}}>Cadastre uma pessoa de confiança para ter acesso rápido durante a corrida.</div><button onClick={()=>setShowContactForm(v=>!v)} style={{...btn,background:'#111',color:'#fff',marginTop:8,padding:'9px 11px'}}>{showContactForm?'Fechar':'Cadastrar contato'}</button>{showContactForm&&<form onSubmit={saveContact} style={{display:'grid',gap:7,marginTop:9}}><input required name="name" minLength={2} placeholder="Nome" style={input}/><input required name="phone" placeholder="Telefone / WhatsApp" style={input}/><input name="relationship" placeholder="Relação: esposa, irmão, amigo..." style={input}/><button disabled={busy} style={{...btn,background:'#ffd400',color:'#000'}}>Salvar contato principal</button></form>}</div>}
   {active.length>0&&<div style={{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:12,padding:11}}><b style={{color:'#991b1b'}}>Alerta de segurança ativo</b>{active.slice(0,2).map(a=><div key={a.id} style={{fontSize:12,color:'#7f1d1d',marginTop:5}}>{a.alert_type==='route_deviation'?`Possível desvio de rota${a.distance_from_route_m?` · ${Math.round(Number(a.distance_from_route_m))} m`:''}`:'SOS acionado'} · {new Date(a.created_at).toLocaleTimeString('pt-BR')}</div>)}</div>}
   {msg&&<div style={{fontSize:12,color:'#7c2d12'}}>{msg}</div>}
  </div>
