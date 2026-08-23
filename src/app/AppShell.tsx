@@ -17,7 +17,7 @@ const primary = [
 
 const groups = [
   { title: 'Rede e acessos', items: [['Cidades','/cidades'],['Acessos','/acessos'],['Planos','/planos']] },
-  { title: 'Operação', items: [['Passageiros','/passageiros'],['Mapa em tempo real','/mapa'],['Relatório por Motorista','/relatorios-motoristas'],['Bloqueios','/bloqueios'],['Controle Total','/controle']] },
+  { title: 'Operação', items: [['Passageiros','/passageiros'],['Mapa em tempo real','/mapa'],['Taxímetros','/taximetros'],['Relatório por Motorista','/relatorios-motoristas'],['Bloqueios','/bloqueios'],['Controle Total','/controle']] },
   { title: 'Tarifas e áreas', items: [['Tarifas & Categorias','/tarifas'],['Regiões & Áreas','/regioes']] },
   { title: 'Pagamentos', items: [['Pagamentos','/pagamentos'],['Pagamentos & Carteira','/configuracoes-pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
   { title: 'Marketing e gestão', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners'],['Auditoria & Logs','/auditoria']] },
