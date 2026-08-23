@@ -12,6 +12,7 @@ const items=[
  ['/franqueado/motoristas-categorias','Categorias dos motoristas'],
  ['/franqueado/cancelamentos','Cancelamentos'],
  ['/franqueado/operacao','Operação'],
+ ['/franqueado/taximetros','Taxímetros'],
  ['/franqueado/seguranca','Segurança'],
  ['/franqueado/carteiras','Carteiras'],
  ['/franqueado/taxas','Taxas R$/%'],
