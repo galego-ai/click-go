@@ -20,13 +20,13 @@ const groups = [
   { title: 'Tarifas e áreas', items: [['Tarifas & Categorias','/tarifas'],['Regiões & Áreas','/regioes']] },
   { title: 'Pagamentos', items: [['Pagamentos','/pagamentos'],['Pagamentos & Carteira','/configuracoes-pagamentos'],['Repasses','/repasses'],['Antecipações','/antecipacoes']] },
   { title: 'Marketing e gestão', items: [['Cupons','/cupons'],['Promoções','/promocoes'],['Banners & Anunciantes','/controle#banners'],['Auditoria & Logs','/auditoria']] },
-  { title: 'Aplicativos', items: [['App Passageiro','/passageiro'],['App Motorista','/motorista-app'],['Painel Franqueado','/franqueado']] },
+  { title: 'Aplicativos', items: [['App Passageiro','/passageiro'],['App Motorista','/motorista-app'],['Painel Franqueado','/franqueado/login']] },
 ]
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const assist=<AuthAssist/>
-  if (pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname === '/login' || pathname === '/redefinir-senha') return <>{children}{assist}</>
+  if (pathname === '/' || pathname.startsWith('/franqueado') || pathname.startsWith('/passageiro') || pathname.startsWith('/motorista-app') || pathname.startsWith('/acompanhar') || pathname === '/login' || pathname === '/redefinir-senha') return <>{children}{assist}</>
 
   const isActive = (href:string) => href.split('#')[0] === pathname
 
