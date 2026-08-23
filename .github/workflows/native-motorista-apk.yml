@@ -68,15 +68,17 @@ jobs:
           python3 apply_driver_flow_v22.py
           python3 apply_driver_login_sound_bubble_v23.py
           python3 apply_driver_v23_registration_restore.py
+          python3 apply_driver_commercial_ui_v24.py
+          python3 apply_driver_rating_v25.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v2.3-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v2.5-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v2.3-prime
-          path: apk-output/CLICK-GO-Motorista-native-v2.3-prime.apk
+          name: CLICK-GO-Motorista-native-v2.5-prime
+          path: apk-output/CLICK-GO-Motorista-native-v2.5-prime.apk
           if-no-files-found: error
