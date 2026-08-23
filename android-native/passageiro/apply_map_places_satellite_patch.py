@@ -11,28 +11,23 @@ def add_import(after,value):
 add_import('import org.osmdroid.tileprovider.tilesource.TileSourceFactory;\n','import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;\n')
 add_import('import org.osmdroid.util.BoundingBox;\n','import org.osmdroid.util.MapTileIndex;\n')
 
-# Fonte de satélite: não usa chave do app e mantém o modo Rua (OSM) como padrão.
 field_anchor='''    private static final int ORANGE = Color.rgb(255, 138, 61);\n'''
 field_new='''    private static final int ORANGE = Color.rgb(255, 138, 61);\n    private static final OnlineTileSourceBase SATELLITE_SOURCE = new OnlineTileSourceBase(\n            "Esri World Imagery", 0, 19, 256, ".jpg",\n            new String[]{"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"}) {\n        @Override public String getTileURLString(long index) {\n            int z = MapTileIndex.getZoom(index);\n            int x = MapTileIndex.getX(index);\n            int y = MapTileIndex.getY(index);\n            return getBaseUrl() + z + "/" + y + "/" + x;\n        }\n    };\n'''
 if field_anchor not in text: raise SystemExit('Constantes do mapa não encontradas')
 text=text.replace(field_anchor,field_new,1)
 
-# Cache leve de empresas próximas vindas da API oficial Google Places no servidor.
 state_anchor='''    private String destinationLabel = "";\n'''
 state_new='''    private String destinationLabel = "";\n    private JSONArray nearbyBusinesses = new JSONArray();\n    private int businessLoadSeq = 0;\n'''
 if state_anchor not in text: raise SystemExit('Estado do destino não encontrado')
 text=text.replace(state_anchor,state_new,1)
 
-# Controles Rua/Satélite na tela principal da rota.
 map_anchor='''        mapFrame.addView(map, new FrameLayout.LayoutParams(-1, -1));\n\n        Button back = circleButton("←", 52);\n'''
 map_new='''        mapFrame.addView(map, new FrameLayout.LayoutParams(-1, -1));\n        addMapModeButtons(mapFrame, map);\n\n        Button back = circleButton("←", 52);\n'''
 if map_anchor not in text: raise SystemExit('Mapa principal não encontrado')
 text=text.replace(map_anchor,map_new,1)
 
-# Carrega empresas somente depois que a tela e o mapa estão prontos.
 options_anchor='''        final MapView firstMap = map;\n        firstMap.post(() -> {\n            if (!destroyed && map == firstMap) drawRoute();\n        });\n        loadOptions();\n'''
 if options_anchor not in text:
-    # Compatibilidade caso o patch ANR ainda use o bloco simples.
     options_anchor='''        setContentView(root);\n        drawRoute();\n        loadOptions();\n'''
     options_new='''        setContentView(root);\n        drawRoute();\n        loadNearbyBusinesses(origin, map);\n        loadOptions();\n'''
 else:
@@ -40,7 +35,6 @@ else:
 if options_anchor not in text: raise SystemExit('Final de showOptions não encontrado')
 text=text.replace(options_anchor,options_new,1)
 
-# Preserva marcadores comerciais após o redesenho da rota.
 route_anchor='''        map.getOverlays().add(line);\n        final MapView routeMap = map;\n'''
 route_new='''        map.getOverlays().add(line);\n        addBusinessMarkers(map);\n        final MapView routeMap = map;\n'''
 if route_anchor in text:
@@ -51,24 +45,18 @@ else:
     if route_anchor not in text: raise SystemExit('Rota final não encontrada')
     text=text.replace(route_anchor,route_new,1)
 
-# Controles Rua/Satélite também no seletor de destino/embarque.
-picker_anchor='''        frame.addView(picker, new FrameLayout.LayoutParams(-1, -1));\n        GeoPoint initial = forOrigin ? origin : origin;\n'''
-picker_new='''        frame.addView(picker, new FrameLayout.LayoutParams(-1, -1));\n        addMapModeButtons(frame, picker);\n        GeoPoint initial = forOrigin ? origin : origin;\n'''
-if picker_anchor not in text: raise SystemExit('Seletor de mapa final não encontrado')
+# A linha frame.addView(picker...) é exclusiva do seletor. Não depende da expressão de initial.
+picker_anchor='''        frame.addView(picker, new FrameLayout.LayoutParams(-1, -1));\n'''
+picker_new='''        frame.addView(picker, new FrameLayout.LayoutParams(-1, -1));\n        addMapModeButtons(frame, picker);\n'''
+if picker_anchor not in text: raise SystemExit('Frame do seletor de mapa não encontrado')
 text=text.replace(picker_anchor,picker_new,1)
 
-# Empresas no seletor aparecem sem interferir no arraste.
-picker_set_anchor='''        setContentView(root);\n    }\n\n    private TextView drawerItem'''
-if picker_set_anchor not in text:
-    # O método drawerItem pode vir depois de outros helpers; usa trecho do fim do picker.
-    picker_set_anchor='''        setContentView(root);\n    }\n'''
-    picker_set_new='''        setContentView(root);\n        loadNearbyBusinesses(initial, picker);\n    }\n'''
-else:
-    picker_set_new='''        setContentView(root);\n        loadNearbyBusinesses(initial, picker);\n    }\n\n    private TextView drawerItem'''
-if picker_set_anchor not in text: raise SystemExit('Fim do seletor não encontrado')
-text=text.replace(picker_set_anchor,picker_set_new,1)
+# Carrega empresas após initial já existir e sem interferir no gesto de arrastar.
+business_picker_anchor='''        final GeoPoint[] chosen = { initial };\n'''
+business_picker_new='''        final GeoPoint[] chosen = { initial };\n        loadNearbyBusinesses(initial, picker);\n'''
+if business_picker_anchor not in text: raise SystemExit('Coordenada escolhida do seletor não encontrada')
+text=text.replace(business_picker_anchor,business_picker_new,1)
 
-# Helpers antes dos helpers de UI.
 helper_marker='''    private TextView drawerItem(String icon, String label) {\n'''
 if helper_marker not in text:
     helper_marker='''    private LinearLayout showSectionShell(String title) {\n'''
@@ -110,12 +98,12 @@ helpers=r'''    private void addMapModeButtons(FrameLayout frame, MapView target
                 if (rows == null || seq != businessLoadSeq) return;
                 nearbyBusinesses = rows;
                 ui.post(() -> {
-                    if (destroyed || seq != businessLoadSeq || target == null) return;
+                    if (destroyed || seq != businessLoadSeq) return;
                     addBusinessMarkers(target);
                     target.invalidate();
                 });
             } catch (Exception ignored) {
-                // Sem chave Google Places configurada ou sem rede: o mapa continua funcional normalmente.
+                // Sem chave Google Places ou sem rede: o mapa permanece funcional.
             }
         });
     }
@@ -135,9 +123,8 @@ helpers=r'''    private void addMapModeButtons(FrameLayout frame, MapView target
             String phone = place.optString("phone", "").trim();
             String address = place.optString("address", "").trim();
             marker.setTitle(name);
-            String details = (!phone.isBlank() ? "Telefone: " + phone : "Telefone não informado")
-                    + (!address.isBlank() ? "\n" + address : "");
-            marker.setSnippet(details);
+            marker.setSnippet((!phone.isBlank() ? "Telefone: " + phone : "Telefone não informado")
+                    + (!address.isBlank() ? "\n" + address : ""));
             GradientDrawable icon = new GradientDrawable();
             icon.setShape(GradientDrawable.OVAL);
             icon.setColor(YELLOW);
@@ -153,7 +140,6 @@ helpers=r'''    private void addMapModeButtons(FrameLayout frame, MapView target
 if helper_marker not in text: raise SystemExit('Ponto para helpers do mapa não encontrado')
 text=text.replace(helper_marker,helpers+helper_marker,1)
 
-# Versão v1.6.
 build_path=Path('app/build.gradle')
 build=build_path.read_text(encoding='utf-8')
 for old in ["versionCode 15","versionCode 14"]:
