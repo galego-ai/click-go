@@ -10,19 +10,15 @@ if 'private long lastLocationHeartbeatAt;' not in text:
         raise SystemExit('Campo destroyed não encontrado')
     text = text.replace(field_anchor, field_anchor + '    private long lastLocationHeartbeatAt;\n', 1)
 
+# Recebe posição periodicamente mesmo com o veículo parado. Antes o Android
+# exigia deslocamento mínimo de 3 metros, fazendo o motorista online ficar
+# com localização velha e ser excluído pelo dispatch após 2 minutos.
 old_watch = 'locationManager.requestLocationUpdates(provider,5000,3f,locationListener,Looper.getMainLooper());'
 new_watch = 'locationManager.requestLocationUpdates(provider,10000,0f,locationListener,Looper.getMainLooper());'
 if old_watch in text:
     text = text.replace(old_watch, new_watch, 1)
 elif new_watch not in text:
     raise SystemExit('requestLocationUpdates do motorista não encontrado')
-
-old_listener = 'locationListener = loc -> { currentLocation=loc; if(online) io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); };'
-new_listener = 'locationListener = loc -> { currentLocation=loc; if(online) { lastLocationHeartbeatAt=System.currentTimeMillis(); io.execute(() -> { try { DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null); } catch(Exception ignored){} }); } };'
-if old_listener in text:
-    text = text.replace(old_listener, new_listener, 1)
-elif new_listener not in text:
-    raise SystemExit('Listener de localização do motorista não encontrado')
 
 poll_anchor = '    private void startPolling(){ stopPolling(); poller=new Runnable(){public void run(){if(!online||destroyed)return;refreshOperation();ui.postDelayed(this,4500);}};ui.post(poller); }\n'
 new_poll = '    private void startPolling(){ stopPolling(); poller=new Runnable(){public void run(){if(!online||destroyed)return;heartbeatLocation();refreshOperation();ui.postDelayed(this,4500);}};ui.post(poller); }\n'
@@ -38,7 +34,12 @@ heartbeat_method = '''    private void heartbeatLocation(){
         if(now-lastLocationHeartbeatAt<30000)return;
         lastLocationHeartbeatAt=now;
         Location loc=currentLocation;
-        io.execute(()->{try{DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null);}catch(Exception ignored){}});
+        if(!sendingLocation.compareAndSet(false,true))return;
+        io.execute(()->{
+            try{DriverRepository.updateLocation(token,loc.getLatitude(),loc.getLongitude(),loc.hasBearing()?loc.getBearing():null,loc.hasSpeed()?loc.getSpeed():null);}
+            catch(Exception ignored){}
+            finally{sendingLocation.set(false);}
+        });
     }
 '''
 if 'private void heartbeatLocation()' not in text:
