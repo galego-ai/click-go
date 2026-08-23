@@ -51,8 +51,8 @@ jobs:
           python3 apply_destination_marker_patch.py
           python3 apply_drag_avatar_picker_patch.py
           python3 apply_functional_menu_patch.py
-          python3 apply_profile_photo_cpf_lock_patch.py
           python3 apply_map_places_satellite_patch.py
+          python3 apply_profile_photo_cpf_lock_patch.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
