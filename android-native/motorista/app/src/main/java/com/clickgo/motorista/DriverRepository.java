@@ -67,6 +67,33 @@ public final class DriverRepository {
         return publicUrl;
     }
 
+    public static void uploadDocument(String token, String userId, String documentType, byte[] bytes, String contentType) throws Exception {
+        if (documentType == null || !documentType.matches("[a-z0-9_]+")) throw new Exception("Tipo de documento inválido.");
+        if (bytes == null || bytes.length == 0) throw new Exception("O arquivo está vazio.");
+        if (bytes.length > 12 * 1024 * 1024) throw new Exception("O arquivo deve ter no máximo 12 MB.");
+        String mime = contentType == null ? "" : contentType.toLowerCase();
+        String ext = mime.contains("pdf") ? "pdf" : mime.contains("png") ? "png" : mime.contains("webp") ? "webp" : "jpg";
+        String safeMime = ext.equals("pdf") ? "application/pdf" : ext.equals("png") ? "image/png" : ext.equals("webp") ? "image/webp" : "image/jpeg";
+        String objectPath = userId + "/" + documentType + "." + ext;
+        ApiClient.storageUpload("driver-documents", objectPath, bytes, safeMime, token);
+
+        JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq." + documentType + "&select=id&order=created_at.desc&limit=1", token));
+        JSONObject payload = new JSONObject()
+                .put("file_path", objectPath)
+                .put("status", "pending")
+                .put("rejection_reason", JSONObject.NULL)
+                .put("reviewed_by", JSONObject.NULL)
+                .put("reviewed_at", JSONObject.NULL);
+        if (existing.length() == 0) {
+            payload.put("driver_id", userId).put("document_type", documentType);
+            ApiClient.restPost("driver_documents", payload, token);
+        } else {
+            String id = existing.getJSONObject(0).optString("id", "");
+            if (id.isBlank()) throw new Exception("Documento existente inválido.");
+            ApiClient.restPatch("driver_documents?id=eq." + id, payload, token);
+        }
+    }
+
     public static JSONObject wallet(String token) {
         try {
             JSONArray rows = new JSONArray(ApiClient.rpc("get_my_driver_wallet_summary", new JSONObject(), token));
