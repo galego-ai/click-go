@@ -78,6 +78,7 @@ jobs:
           python3 apply_passenger_v212_compat.py
           python3 apply_passenger_commercial_ui_v212.py
           python3 apply_passenger_mapbox_safe_ui_v213.py
+          python3 apply_passenger_v214_history_compat.py
           python3 apply_passenger_live_ux_v214.py
           python3 apply_passenger_history_address_fix_v214.py
           python3 apply_passenger_chat_v215.py
