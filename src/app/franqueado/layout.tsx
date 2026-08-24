@@ -4,35 +4,45 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import RoleGate from '@/components/RoleGate'
 
-const items=[
- ['/franqueado','Painel'],
- ['/franqueado/cadastros','Cadastros'],
- ['/franqueado/documentos','Documentos'],
- ['/franqueado/categorias','Categorias e preços'],
- ['/franqueado/motoristas-categorias','Categorias dos motoristas'],
- ['/franqueado/cancelamentos','Cancelamentos'],
+const core=[
+ ['/franqueado','Início'],
  ['/franqueado/operacao','Operação'],
- ['/franqueado/taximetros','Taxímetros'],
- ['/franqueado/seguranca','Segurança'],
+ ['/franqueado/cadastros','Motoristas e passageiros'],
+ ['/franqueado/categorias','Tarifas'],
  ['/franqueado/carteiras','Carteiras'],
- ['/franqueado/taxas','Taxas R$/%'],
- ['/franqueado/pagamentos','Pagamentos'],
+ ['/franqueado/pagamentos','Financeiro'],
+] as const
+
+const more=[
+ ['/franqueado/mapa','Mapa ao vivo'],
+ ['/franqueado/documentos','Documentos pendentes'],
+ ['/franqueado/cancelamentos','Cancelamentos'],
  ['/franqueado/anuncios','Anúncios'],
  ['/franqueado/repasse','Repasses'],
- ['/franqueado/mapa','Mapa'],
-]
+ ['/franqueado/taximetros','Taxímetros'],
+ ['/franqueado/seguranca','Segurança'],
+ ['/franqueado/taxas','Taxas da operação'],
+ ['/franqueado/motoristas-categorias','Categorias dos motoristas'],
+] as const
 
 export default function FranchiseLayout({children}:{children:React.ReactNode}){
  const pathname=usePathname()
- if(pathname==='/franqueado/login') return <>{children}</>
-
+ if(pathname==='/franqueado/login'||pathname==='/franqueado/trocar-senha-temporaria')return <>{children}</>
+ const active=(href:string)=>pathname===href||pathname.startsWith(href+'/')
+ const moreOpen=more.some(([href])=>active(href))
  return <RoleGate role="franchise_admin" loginPath="/franqueado/login">
-  <div style={{background:'#080808',minHeight:'100vh'}}>
-   <header style={{position:'sticky',top:0,zIndex:1000,background:'#0b0b0bee',backdropFilter:'blur(10px)',borderBottom:'1px solid #262626',padding:'10px 16px',display:'flex',alignItems:'center',gap:12,overflowX:'auto'}}>
-    <Link href="/franqueado" style={{color:'#000',background:'#ffd400',fontWeight:900,textDecoration:'none',padding:'9px 12px',borderRadius:9,whiteSpace:'nowrap'}}>CLICK-GO Franqueado</Link>
-    {items.map(([href,name])=><Link key={href} href={href} style={{color:pathname===href?'#ffd400':'#e5e7eb',textDecoration:'none',fontWeight:700,fontSize:14,padding:'8px 9px',whiteSpace:'nowrap'}}>{name}</Link>)}
-   </header>
-   {children}
+  <div className="regional-shell">
+   <aside className="regional-sidebar">
+    <Link href="/franqueado" className="regional-brand"><span>CG</span><div><strong>CLICK-GO</strong><small>Regional</small></div></Link>
+    <nav className="regional-nav">
+     {core.map(([href,label])=><Link key={href} href={href} className={active(href)?'active':''}>{label}</Link>)}
+     <details className="regional-more" open={moreOpen}>
+      <summary>Mais opções</summary>
+      <div>{more.map(([href,label])=><Link key={href} href={href} className={active(href)?'active':''}>{label}</Link>)}</div>
+     </details>
+    </nav>
+   </aside>
+   <main className="regional-main">{children}</main>
   </div>
  </RoleGate>
 }
