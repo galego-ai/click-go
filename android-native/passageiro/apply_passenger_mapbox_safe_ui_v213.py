@@ -22,15 +22,12 @@ if 'import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;' not in te
 if 'import org.osmdroid.util.MapTileIndex;' not in text:
     add_import('import org.osmdroid.util.BoundingBox;\n', 'import org.osmdroid.util.MapTileIndex;\n')
 
-# -----------------------------------------------------------------------------
 # CLICK-GO Passageiro v2.13 PRIME
 # - corrige recorte causado pelo edge-to-edge do Android 15/targetSdk 35;
 # - usa Mapbox Streets/Satellite como mapa base, mantendo MAPNIK como fallback;
 # - reverse geocoding via endpoint CLICK-GO (Mapbox primeiro + fallbacks);
-# - busca de endereço regionalizada pela coordenada atual.
-# -----------------------------------------------------------------------------
+# - preserva a busca regionalizada por lat/lng já aplicada pelos patches anteriores.
 
-# O card cresceu na v2.12, mas a altura antiga continuava fixa em 142dp.
 text = text.replace(
     'FrameLayout.LayoutParams bottomLp=new FrameLayout.LayoutParams(-1,dp(142));',
     'FrameLayout.LayoutParams bottomLp=new FrameLayout.LayoutParams(-1,FrameLayout.LayoutParams.WRAP_CONTENT);',
@@ -38,7 +35,7 @@ text = text.replace(
 )
 text = text.replace('locateLp.bottomMargin=dp(164);', 'locateLp.bottomMargin=dp(226);', 1)
 
-# MAPNIK continua como fallback imediato, Mapbox entra assim que o token público chega.
+
 def mapbox_after_fallback(match: re.Match) -> str:
     var = match.group(1)
     indent = match.group(2)
@@ -50,13 +47,11 @@ text = re.sub(
     text,
 )
 
-# Botão Satélite passa a usar Mapbox Satellite Streets; não dependemos mais do tile Esri.
 text = text.replace(
     'target.setTileSource(SATELLITE_SOURCE);\n            target.invalidate();',
     'loadMapboxBasemap(target, "satellite-streets-v12");',
 )
 
-# Reverse geocode confiável via API web do CLICK-GO, que já consulta Mapbox e possui fallbacks.
 pattern = r'''    private void reverseGeocodeOrigin\(Location location, TextView labelView, int seq\) \{.*?\n    \}\n\n    private String shortAddress\(Address address\) \{'''
 replacement = r'''    private void reverseGeocodeOrigin(Location location, TextView labelView, int seq) {
         final double lat = location.getLatitude();
@@ -79,7 +74,7 @@ replacement = r'''    private void reverseGeocodeOrigin(Location location, TextV
                     }
                 });
             } catch (Exception ignored) {
-                // Mantém "Minha localização atual" se todos os provedores estiverem indisponíveis.
+                // Mantém a localização atual se os provedores estiverem indisponíveis.
             }
         });
     }
@@ -89,22 +84,6 @@ text, n = re.subn(pattern, replacement, text, count=1, flags=re.S)
 if n != 1:
     raise SystemExit('reverseGeocodeOrigin não encontrado')
 
-# A busca de destino passa latitude/longitude atuais ao backend, melhorando resultados locais.
-old = '''                String url = BuildConfig.GEOCODE_URL + "?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8.toString());\n                JSONObject root = new JSONObject(ApiClient.absoluteGet(url));'''
-new = '''                StringBuilder url = new StringBuilder(BuildConfig.GEOCODE_URL)
-                        .append("?q=")
-                        .append(URLEncoder.encode(query, StandardCharsets.UTF_8.toString()));
-                GeoPoint near = origin;
-                if (near != null) {
-                    url.append("&lat=").append(near.getLatitude())
-                       .append("&lng=").append(near.getLongitude());
-                }
-                JSONObject root = new JSONObject(ApiClient.absoluteGet(url.toString()));'''
-if old not in text:
-    raise SystemExit('URL da busca de endereço não encontrada')
-text = text.replace(old, new, 1)
-
-# Evita a home ficar eternamente em "Obtendo sua localização" quando o GPS demora.
 needle = '''                ui.post(() -> requestFreshLocation(manager, labelView, seq, userAction));\n'''
 if needle in text:
     text = text.replace(needle, needle + '''                ui.postDelayed(() -> {
@@ -113,7 +92,6 @@ if needle in text:
                 }, 8000);
 ''', 1)
 
-# Helpers: safe area do Android 15 e tile source Mapbox.
 marker = '''    private void showHome() {\n'''
 helpers = r'''    private void applySafeInsets(View root) {
         if (root == null) return;
@@ -167,7 +145,7 @@ helpers = r'''    private void applySafeInsets(View root) {
                 if (accessToken == null || accessToken.isBlank()) return;
                 OnlineTileSourceBase source = mapboxRasterSource(styleId, accessToken);
                 ui.post(() -> {
-                    if (destroyed || target == null) return;
+                    if (destroyed) return;
                     target.setTileSource(source);
                     target.invalidate();
                 });
@@ -182,7 +160,6 @@ if marker not in text:
     raise SystemExit('showHome não encontrado para helpers')
 text = text.replace(marker, helpers + marker, 1)
 
-# Safe insets especificamente nas telas com mapa full-screen.
 home_pattern = r'''(    private void showHome\(\) \{.*?        setContentView\(root\);)(.*?\n    \}\n\n    private void renderHomePassengerMarker)'''
 m = re.search(home_pattern, text, flags=re.S)
 if not m:
@@ -192,12 +169,12 @@ if 'applySafeInsets(root);' not in home_block:
     home_block = home_block.replace('        setContentView(root);', '        setContentView(root);\n        applySafeInsets(root);', 1)
 text = text[:m.start(1)] + home_block + text[m.end(1):]
 
-# Outras telas FrameLayout/LinearLayout que usam mapa também respeitam barras do sistema.
-# Fazemos apenas em raízes chamadas root, logo após setContentView, sem duplicar.
-text = re.sub(r'        setContentView\(root\);\n(?!        applySafeInsets\(root\);)',
-              '        setContentView(root);\n        applySafeInsets(root);\n', text)
+text = re.sub(
+    r'        setContentView\(root\);\n(?!        applySafeInsets\(root\);)',
+    '        setContentView(root);\n        applySafeInsets(root);\n',
+    text,
+)
 
-# Versão 2.13 PRIME.
 m = re.search(r'versionCode\s+(\d+)', build)
 if m:
     build = build[:m.start(1)] + str(int(m.group(1)) + 1) + build[m.end(1):]
@@ -205,4 +182,4 @@ build = re.sub(r"versionName\s+'[^']+'", "versionName '2.13-prime'", build, coun
 
 path.write_text(text, encoding='utf-8')
 build_path.write_text(build, encoding='utf-8')
-print('Passageiro v2.13 PRIME: safe-area, Mapbox base e geocodificação regional aplicados.')
+print('Passageiro v2.13 PRIME: safe-area, Mapbox base e geocodificação aplicados.')
