@@ -39,7 +39,7 @@ export default function DashboardData(){
  return <>
   {msg&&<p className="empty">{msg}</p>}
   <div className="grid dashboard-kpis">{primary.map(([label,value])=><div className="card dashboard-card" key={String(label)}><div className="label">{label}</div><div className="metric">{value}</div></div>)}</div>
-  <div className="compact-stats"><div className="compact-stat"><span>Pendências financeiras</span><strong>{k.pending}</strong></div><div className="compact-stat"><span>Chamados abertos</span><strong>{k.tickets}</strong></div></div>
+  <div className="compact-stats" style={{gridTemplateColumns:'repeat(2,minmax(0,1fr))'}}><div className="compact-stat"><span>Pendências financeiras</span><strong>{k.pending}</strong></div><div className="compact-stat"><span>Chamados abertos</span><strong>{k.tickets}</strong></div></div>
   <div className="section dashboard-section"><div className="section-heading"><div><h2>Operação de hoje</h2><p className="subtitle">Resumo das cidades com corridas concluídas hoje.</p></div></div><div className="table-wrap"><table className="table"><thead><tr><th>Cidade</th><th>Franqueado</th><th>Corridas</th><th>Faturamento</th></tr></thead><tbody>{rows.length===0?<tr><td colSpan={4} className="empty">Ainda não há corridas concluídas hoje.</td></tr>:rows.map((r,i)=><tr key={`${r.city}-${i}`}><td>{r.city}</td><td>{r.franchise}</td><td>{r.rides}</td><td>{brl(r.gross)}</td></tr>)}</tbody></table></div></div>
  </>
 }
