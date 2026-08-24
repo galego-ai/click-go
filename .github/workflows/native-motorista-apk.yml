@@ -73,6 +73,7 @@ jobs:
           python3 apply_driver_clean_menu_v26.py
           python3 apply_driver_offer_popup_wallet_eye_v27.py
           python3 apply_driver_sober_ui_v28.py
+          python3 apply_driver_history_address_fix_v28.py
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
