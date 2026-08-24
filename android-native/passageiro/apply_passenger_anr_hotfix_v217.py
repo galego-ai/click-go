@@ -7,64 +7,118 @@ text = main_path.read_text(encoding='utf-8')
 build = build_path.read_text(encoding='utf-8')
 
 # CLICK-GO Passageiro v2.17 PRIME - hotfix ANR
-# A v2.16 podia repetir restore -> showHome -> restore em caso de falha de rede/token,
-# mantendo a Activity em um ciclo de trabalho. A retomada agora é assíncrona,
-# limitada e nunca bloqueia/recursa a tela principal.
+# A retomada de corrida deve ser totalmente assíncrona e nunca impedir a primeira
+# renderização da home, nem disparar showHome -> restore -> showHome em caso de erro.
 
-# 1) A home deve SEMPRE renderizar imediatamente. A corrida salva será validada
-# em background pelo onResume, sem impedir a primeira pintura da Activity.
-old_home = '''    private void showHome() {\n        String savedRide=getPreferences(MODE_PRIVATE).getString("active_ride_id","");\n        if((activeRideId==null||activeRideId.isBlank())&&!savedRide.isBlank()&&!restoringActiveRide){restoreActiveRideIfNeeded(true);return;}\n        cancelAddressSearch();'''
-new_home = '''    private void showHome() {\n        String savedRide=getPreferences(MODE_PRIVATE).getString("active_ride_id","");\n        cancelAddressSearch();'''
-if old_home in text:
-    text = text.replace(old_home, new_home, 1)
-elif 'if((activeRideId==null||activeRideId.isBlank())&&!savedRide.isBlank()&&!restoringActiveRide){restoreActiveRideIfNeeded(true);return;}' in text:
-    text = text.replace('        if((activeRideId==null||activeRideId.isBlank())&&!savedRide.isBlank()&&!restoringActiveRide){restoreActiveRideIfNeeded(true);return;}\n', '', 1)
-else:
-    raise SystemExit('Hotfix v2.17: preâmbulo de showHome v2.16 não encontrado')
+# 1) Se a correção v2.16 tiver inserido uma trava síncrona no começo de showHome,
+# remove somente essa condicional. O regex tolera qualquer espaçamento/formatação.
+home_guard = re.compile(
+    r'\s*if\s*\(\s*\(\s*activeRideId\s*==\s*null\s*\|\|\s*activeRideId\.isBlank\(\)\s*\)\s*'
+    r'&&\s*!\s*savedRide\.isBlank\(\)\s*&&\s*!\s*restoringActiveRide\s*\)\s*\{\s*'
+    r'restoreActiveRideIfNeeded\s*\(\s*true\s*\)\s*;\s*return\s*;\s*\}',
+    re.S,
+)
+text, _ = home_guard.subn('', text, count=1)
 
-# 2) Adiciona throttle para não repetir consulta de retomada em sequência.
-field = '''    private boolean restoringActiveRide;\n'''
-field_new = '''    private boolean restoringActiveRide;\n    private long lastActiveRideRestoreAt;\n'''
+# 2) Throttle das verificações para evitar tempestade de chamadas ao voltar do background.
 if 'private long lastActiveRideRestoreAt;' not in text:
-    if field not in text:
+    text, n = re.subn(
+        r'(\s*private\s+boolean\s+restoringActiveRide\s*;)',
+        r'\1\n    private long lastActiveRideRestoreAt;',
+        text,
+        count=1,
+    )
+    if n != 1:
         raise SystemExit('Hotfix v2.17: campo restoringActiveRide não encontrado')
-    text = text.replace(field, field_new, 1)
 
-restore_start = '''    private void restoreActiveRideIfNeeded(boolean goHomeWhenMissing){\n        if(restoringActiveRide||token==null||token.isBlank())return;\n        restoringActiveRide=true;'''
-restore_start_new = '''    private void restoreActiveRideIfNeeded(boolean goHomeWhenMissing){\n        if(restoringActiveRide||token==null||token.isBlank()||destroyed||isFinishing())return;\n        long now=android.os.SystemClock.elapsedRealtime();\n        if(!goHomeWhenMissing&&lastActiveRideRestoreAt>0&&now-lastActiveRideRestoreAt<3500)return;\n        lastActiveRideRestoreAt=now;\n        restoringActiveRide=true;'''
-if restore_start in text:
-    text = text.replace(restore_start, restore_start_new, 1)
-elif 'lastActiveRideRestoreAt' not in text:
-    raise SystemExit('Hotfix v2.17: início do restore não encontrado')
+# 3) Localiza somente o método de restore, para não alterar catches de outras rotinas.
+restore_pos = text.find('private void restoreActiveRideIfNeeded(boolean goHomeWhenMissing)')
+if restore_pos < 0:
+    raise SystemExit('Hotfix v2.17: método restoreActiveRideIfNeeded não encontrado')
+show_home_pos = text.find('private void showHome()', restore_pos)
+if show_home_pos < 0:
+    raise SystemExit('Hotfix v2.17: limite do método restore não encontrado')
+restore = text[restore_pos:show_home_pos]
 
-# 3) Em erro de rede/token não chama showHome() de novo. Isso elimina a recursão.
-old_catch = '''            }catch(Exception e){ui.post(()->{restoringActiveRide=false;if(goHomeWhenMissing)showHome();});}\n        });\n    }'''
-new_catch = '''            }catch(Exception e){\n                ui.post(()->{\n                    restoringActiveRide=false;\n                    if(destroyed||isFinishing())return;\n                    if(goHomeWhenMissing)toast("Não foi possível verificar sua corrida agora. Tente novamente em instantes.");\n                });\n            }\n        });\n    }'''
-if old_catch in text:
-    text = text.replace(old_catch, new_catch, 1)
+# Guarda + throttle no início do restore.
+restore, n = re.subn(
+    r'if\s*\(\s*restoringActiveRide\s*\|\|\s*token\s*==\s*null\s*\|\|\s*token\.isBlank\(\)\s*\)\s*return\s*;\s*'
+    r'restoringActiveRide\s*=\s*true\s*;',
+    'if(restoringActiveRide||token==null||token.isBlank()||destroyed||isFinishing())return;\n'
+    '        long now=android.os.SystemClock.elapsedRealtime();\n'
+    '        if(lastActiveRideRestoreAt>0&&now-lastActiveRideRestoreAt<3500)return;\n'
+    '        lastActiveRideRestoreAt=now;\n'
+    '        restoringActiveRide=true;',
+    restore,
+    count=1,
+)
+if n != 1 and 'android.os.SystemClock.elapsedRealtime()' not in restore:
+    raise SystemExit('Hotfix v2.17: guarda inicial do restore não encontrada')
+
+# Quando não há corrida, limpa o id local e libera o throttle.
+restore = restore.replace(
+    'restoringActiveRide=false;activeRideId=null;trackingUiActive=false;',
+    'restoringActiveRide=false;lastActiveRideRestoreAt=0;activeRideId=null;trackingUiActive=false;',
+    1,
+)
+
+# O último showHome condicionado dentro do método é o catch de erro. Em erro de
+# rede/token apenas libera a flag; NÃO chama showHome novamente.
+needle = 'if(goHomeWhenMissing)showHome();'
+last = restore.rfind(needle)
+if last >= 0:
+    restore = restore[:last] + 'if(goHomeWhenMissing&&!destroyed&&!isFinishing())toast("Não foi possível verificar sua corrida agora. Tente novamente em instantes.");' + restore[last + len(needle):]
 else:
-    raise SystemExit('Hotfix v2.17: catch recursivo do restore não encontrado')
+    # Aceita também versões já corrigidas; não falha se não houver recursão.
+    if 'Não foi possível verificar sua corrida agora' not in restore:
+        raise SystemExit('Hotfix v2.17: catch de restore não identificado')
 
-# 4) Antes de solicitar uma nova corrida, se existir um id salvo ainda não validado,
-# inicia uma verificação em background e impede duplicidade até o resultado.
-old_request = '''    private void requestRide() {\n        if (destroyed || isFinishing()) return;\n        if(activeRideId!=null&&!activeRideId.isBlank()){toast("Você já possui uma corrida em andamento.");showActiveRide();return;}'''
-new_request = '''    private void requestRide() {\n        if (destroyed || isFinishing()) return;\n        if(activeRideId!=null&&!activeRideId.isBlank()){toast("Você já possui uma corrida em andamento.");showActiveRide();return;}\n        String savedActiveRide=getPreferences(MODE_PRIVATE).getString("active_ride_id","");\n        if(!savedActiveRide.isBlank()){restoreActiveRideIfNeeded(false);toast("Verificando sua corrida em andamento…");return;}\n        if(restoringActiveRide){toast("Aguarde um instante enquanto verificamos sua corrida.");return;}'''
-if old_request in text:
-    text = text.replace(old_request, new_request, 1)
-else:
-    raise SystemExit('Hotfix v2.17: requestRide v2.16 não encontrado')
+text = text[:restore_pos] + restore + text[show_home_pos:]
 
-# 5) Se não houver corrida ativa, a preferência é removida antes da home; isso já existia,
-# mas garantimos também que o throttle seja liberado para futuras verificações legítimas.
-old_empty = '''restoringActiveRide=false;activeRideId=null;trackingUiActive=false;getPreferences(MODE_PRIVATE).edit().remove("active_ride_id").apply();if(goHomeWhenMissing)showHome();'''
-new_empty = '''restoringActiveRide=false;lastActiveRideRestoreAt=0;activeRideId=null;trackingUiActive=false;getPreferences(MODE_PRIVATE).edit().remove("active_ride_id").apply();if(goHomeWhenMissing)showHome();'''
-if old_empty in text:
-    text = text.replace(old_empty, new_empty, 1)
+# 4) A retomada ao voltar ao app é atrasada alguns milissegundos para a Activity
+# concluir layout/mapa primeiro. A consulta continua no executor de I/O.
+immediate_resume = 'if(token!=null&&!token.isBlank()&&activeRideId==null&&!restoringActiveRide) restoreActiveRideIfNeeded(false);'
+delayed_resume = 'if(token!=null&&!token.isBlank()&&activeRideId==null&&!restoringActiveRide) ui.postDelayed(()->{if(!destroyed&&!isFinishing()&&activeRideId==null)restoreActiveRideIfNeeded(false);},700);'
+if immediate_resume in text:
+    text = text.replace(immediate_resume, delayed_resume, 1)
 
-# Marca versão final do APK independentemente das versões intermediárias dos patches.
+# 5) Antes de criar outra corrida, valida um id salvo em background. Isso preserva
+# a regra de não permitir duas corridas simultâneas sem bloquear a interface.
+request_pos = text.find('private void requestRide()')
+if request_pos < 0:
+    raise SystemExit('Hotfix v2.17: requestRide não encontrado')
+request_end = text.find('\n    private void ', request_pos + 10)
+if request_end < 0:
+    request_end = min(len(text), request_pos + 5000)
+request = text[request_pos:request_end]
+if 'String savedActiveRide=' not in request:
+    anchor = 'if(activeRideId!=null&&!activeRideId.isBlank()){toast("Você já possui uma corrida em andamento.");showActiveRide();return;}'
+    if anchor in request:
+        request = request.replace(
+            anchor,
+            anchor + '\n        String savedActiveRide=getPreferences(MODE_PRIVATE).getString("active_ride_id","");\n'
+            '        if(!savedActiveRide.isBlank()){restoreActiveRideIfNeeded(false);toast("Verificando sua corrida em andamento…");return;}\n'
+            '        if(restoringActiveRide){toast("Aguarde um instante enquanto verificamos sua corrida.");return;}',
+            1,
+        )
+    else:
+        # Formatação variável: insere após o guard de Activity.
+        request, n = re.subn(
+            r'(if\s*\(\s*destroyed\s*\|\|\s*isFinishing\(\)\s*\)\s*return\s*;)',
+            r'\1\n        String savedActiveRide=getPreferences(MODE_PRIVATE).getString("active_ride_id","");\n'
+            r'        if(!savedActiveRide.isBlank()){restoreActiveRideIfNeeded(false);toast("Verificando sua corrida em andamento…");return;}\n'
+            r'        if(restoringActiveRide){toast("Aguarde um instante enquanto verificamos sua corrida.");return;}',
+            request,
+            count=1,
+        )
+        if n != 1:
+            raise SystemExit('Hotfix v2.17: ponto de proteção em requestRide não encontrado')
+    text = text[:request_pos] + request + text[request_end:]
+
+# Versão final do APK.
 build = re.sub(r'versionCode\s+\d+', 'versionCode 217', build, count=1)
 build = re.sub(r"versionName\s+'[^']+'", "versionName '2.17-prime'", build, count=1)
 
 main_path.write_text(text, encoding='utf-8')
 build_path.write_text(build, encoding='utf-8')
-print('Passageiro v2.17 PRIME: hotfix ANR e retomada não bloqueante aplicados.')
+print('Passageiro v2.17 PRIME: hotfix ANR não bloqueante aplicado.')
