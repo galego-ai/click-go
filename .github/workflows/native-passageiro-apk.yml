@@ -84,6 +84,7 @@ jobs:
           python3 apply_passenger_history_address_fix_v214.py
           python3 apply_passenger_chat_v215.py
           python3 apply_passenger_active_flow_address_v216.py
+          python3 apply_passenger_address_threshold_fix_v216.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
