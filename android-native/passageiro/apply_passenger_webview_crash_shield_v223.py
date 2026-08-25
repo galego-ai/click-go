@@ -38,3 +38,10 @@ build = re.sub(r"versionName\s+'[^']+'", "versionName '2.23-prime'", build, coun
 main_path.write_text(text, encoding='utf-8')
 build_path.write_text(build, encoding='utf-8')
 print('Passageiro v2.23 PRIME: proteção WebView/banner e smoke com serviços reais aplicados.')
+
+# O workflow já executa este patch como o último estágio. Encadeia a correção v2.24
+# sem alterar o arquivo de workflow nem tocar em secrets/credenciais.
+v224 = Path('apply_passenger_address_results_v224.py')
+if not v224.exists():
+    raise SystemExit('apply_passenger_address_results_v224.py não encontrado')
+exec(compile(v224.read_text(encoding='utf-8'), str(v224), 'exec'), {})
