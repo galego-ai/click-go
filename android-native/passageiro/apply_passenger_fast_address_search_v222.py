@@ -14,8 +14,7 @@ text=text.replace(
     1
 )
 
-# Mantém o mínimo de 3 caracteres para não bombardear o serviço e reduz o debounce,
-# independentemente do valor deixado pelos patches anteriores.
+# Mantém o autocomplete leve e reduz o tempo entre digitação e consulta.
 text,n=re.subn(
     r'ui\.postDelayed\(pendingAddressSearch\s*,\s*\d+\s*\);',
     'ui.postDelayed(pendingAddressSearch,220);',
@@ -25,25 +24,15 @@ text,n=re.subn(
 if n!=1:
     raise SystemExit('debounce atual de endereço não encontrado')
 
-# Cancela trabalho que ainda esteja na fila antes de enfileirar a nova consulta.
-needle='''        if (pendingAddressSearch != null) ui.removeCallbacks(pendingAddressSearch);\n        if (safeQuery.length() < 3) {'''
-replacement='''        if (pendingAddressSearch != null) ui.removeCallbacks(pendingAddressSearch);\n        if (addressFuture != null && !addressFuture.isDone()) addressFuture.cancel(false);\n        if (safeQuery.length() < 3) {'''
-if needle in text:
-    text=text.replace(needle,replacement,1)
-else:
-    needle='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        if(normalized.length()<3){'''
-    replacement='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        if(addressFuture!=null&&!addressFuture.isDone())addressFuture.cancel(false);\n        if(normalized.length()<3){'''
+# Cancela apenas trabalho antigo que ainda esteja pendente; searchSeq protege a tela de resposta atrasada.
+if 'if(addressFuture!=null&&!addressFuture.isDone())addressFuture.cancel(false);' not in text:
+    needle='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        String normalized=query==null?"":query.trim();'''
+    replacement='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        if(addressFuture!=null&&!addressFuture.isDone())addressFuture.cancel(false);\n        String normalized=query==null?"":query.trim();'''
     if needle in text:
         text=text.replace(needle,replacement,1)
 
-# Pede ao backend o caminho rápido, sem pesquisas pesadas de POI quando o usuário só está digitando endereço.
-old='''.append("?q=").append(URLEncoder.encode(query,StandardCharsets.UTF_8.toString()));'''
-new='''.append("?q=").append(URLEncoder.encode(query,StandardCharsets.UTF_8.toString())).append("&fast=1");'''
-if old not in text:
-    raise SystemExit('construção da URL de geocode não encontrada')
-text=text.replace(old,new,1)
-
-# Cinco sugestões são suficientes para a tela e deixam renderização/rolagem mais leves.
+# O endpoint /api/geocode já usa o caminho rápido globalmente: Mapbox primeiro e fallbacks só quando necessários.
+# Mantém no máximo cinco sugestões para renderização mais leve.
 text=text.replace('items.size()<6','items.size()<5',1)
 
 build=re.sub(r'versionCode\s+\d+','versionCode 222',build,count=1)
