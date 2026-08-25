@@ -39,3 +39,7 @@ build=re.sub(r"versionName\s+'[^']+'","versionName '2.27-prime'",build,count=1)
 main_path.write_text(text,encoding='utf-8')
 build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.27 PRIME: autocomplete de endereço acelerado.')
+
+next_patch=Path('apply_passenger_geocode_timeout_v228.py')
+if next_patch.exists():
+    exec(compile(next_patch.read_text(encoding='utf-8'),str(next_patch),'exec'),{'__name__':'__main__'})
