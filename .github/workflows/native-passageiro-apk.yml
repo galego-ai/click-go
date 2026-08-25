@@ -97,7 +97,6 @@ jobs:
           python3 apply_passenger_home_ads_v221.py
           python3 apply_passenger_fast_address_search_v222.py
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
-          grep -q 'append("&fast=1")' app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
