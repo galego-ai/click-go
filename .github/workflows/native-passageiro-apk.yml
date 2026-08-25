@@ -113,9 +113,8 @@ jobs:
           script: |
             adb install -r android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
-            START_OUT=$(adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true)
-            echo "$START_OUT"
-            echo "$START_OUT" | grep -q "Status: ok"
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
+            grep -q "Status: ok" /tmp/start.txt
             sleep 8
             timeout 20 adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml /tmp/window.xml
@@ -125,11 +124,7 @@ jobs:
             timeout 20 adb shell uiautomator dump /sdcard/window2.xml
             adb pull /sdcard/window2.xml /tmp/window2.xml
             grep -q "clickgo_active_ride_screen" /tmp/window2.xml
-            LOGS=$(adb logcat -d)
-            if echo "$LOGS" | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"; then
-              echo "$LOGS" | tail -n 600
-              exit 1
-            fi
+            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
