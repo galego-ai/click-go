@@ -93,6 +93,39 @@ jobs:
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
+      - name: Install API 35 emulator image
+        if: github.event_name == 'pull_request'
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "emulator" "system-images;android-35;google_apis;x86_64"
+      - name: Smoke test accepted ride on emulator
+        if: github.event_name == 'pull_request'
+        run: |
+          echo no | avdmanager create avd -n clickgo-smoke -k "system-images;android-35;google_apis;x86_64" --force
+          sudo chmod 666 /dev/kvm 2>/dev/null || true
+          nohup emulator -avd clickgo-smoke -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect >/tmp/clickgo-emulator.log 2>&1 &
+          adb wait-for-device
+          BOOTED=0
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then BOOTED=1; break; fi
+            sleep 2
+          done
+          if [ "$BOOTED" != "1" ]; then cat /tmp/clickgo-emulator.log; exit 1; fi
+          adb install -r android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk
+          adb logcat -c
+          START_OUT=$(adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true)
+          echo "$START_OUT"
+          echo "$START_OUT" | grep -q "Status: ok"
+          sleep 7
+          timeout 20 adb shell uiautomator dump /sdcard/window.xml
+          adb pull /sdcard/window.xml /tmp/window.xml
+          grep -q "clickgo_active_ride_screen" /tmp/window.xml
+          LOGS=$(adb logcat -d)
+          if echo "$LOGS" | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"; then
+            echo "$LOGS" | tail -n 500
+            exit 1
+          fi
+          adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
