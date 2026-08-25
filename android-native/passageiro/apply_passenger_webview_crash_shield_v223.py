@@ -45,3 +45,9 @@ v224 = Path('apply_passenger_address_results_v224.py')
 if not v224.exists():
     raise SystemExit('apply_passenger_address_results_v224.py não encontrado')
 exec(compile(v224.read_text(encoding='utf-8'), str(v224), 'exec'), {})
+
+# v2.25: busca real resiliente + fallback nativo + Buscar no mapa dentro do app.
+v225 = Path('apply_passenger_address_search_map_v225.py')
+if not v225.exists():
+    raise SystemExit('apply_passenger_address_search_map_v225.py não encontrado')
+exec(compile(v225.read_text(encoding='utf-8'), str(v225), 'exec'), {})

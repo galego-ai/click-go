@@ -101,6 +101,9 @@ jobs:
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
           grep -q "clickgo_home_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "clickgo_address_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "nativeAddressFallback" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "clickgo_search_on_map" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -125,7 +128,7 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
             grep -q "Status: ok" /tmp/start.txt
-            sleep 9
+            sleep 20
             timeout 20 adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml /tmp/window.xml
             grep -q "Motorista a caminho" /tmp/window.xml
@@ -179,12 +182,23 @@ jobs:
             test -s /tmp/home-network.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
+            adb shell am force-stop com.clickgo.passageiro.beta
+            adb logcat -c
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_address_network_smoke true | tee /tmp/address-network.txt
+            grep -q "Status: ok" /tmp/address-network.txt
+            sleep 15
+            timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
+            adb pull /sdcard/address-network.xml /tmp/address-network.xml
+            grep -q "clickgo_search_on_map" /tmp/address-network.xml
+            grep -q "endereco_resultado_1" /tmp/address-network.xml
+            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.23-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.25-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.23-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.23-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.25-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.25-prime.apk
           if-no-files-found: error
