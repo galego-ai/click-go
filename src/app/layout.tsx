@@ -1,10 +1,11 @@
 import './globals.css'
+import './management-extra.css'
 import AppShell from './AppShell'
 import PasswordEyes from '@/components/PasswordEyes'
 import AppNotifications from '@/components/AppNotifications'
 import DriverTaximeterShortcut from '@/components/DriverTaximeterShortcut'
 
-export const metadata = { title: 'CLICK-GO', description: 'Plataforma de mobilidade urbana CLICK-GO' }
+export const metadata = { title: 'CLICK-GO Gestão', description: 'Plataforma multiempresa de mobilidade urbana CLICK-GO' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="pt-BR"><body><PasswordEyes/><AppNotifications/><DriverTaximeterShortcut/><AppShell>{children}</AppShell></body></html>
