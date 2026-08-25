@@ -14,6 +14,11 @@ type SearchResult = {
   distanceKm?: number
 }
 
+type ProviderResult = {
+  provider: 'mapbox' | 'nominatim'
+  rows: SearchResult[]
+}
+
 function parseCoord(value: string | null, min: number, max: number) {
   if (value === null || value.trim() === '') return null
   const n = Number(value)
@@ -57,7 +62,7 @@ async function mapboxSearch(q: string, lat: number | null, lng: number | null): 
   url.searchParams.set('language', 'pt-BR')
   url.searchParams.set('access_token', token)
   if (lat !== null && lng !== null) url.searchParams.set('proximity', `${lng},${lat}`)
-  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(2200) })
   if (!res.ok) return []
   const json = await res.json() as any
   return (json?.features || []).map((f: any) => {
@@ -92,7 +97,6 @@ async function nominatimSearch(q: string, lat: number | null, lng: number | null
     const latDelta = 0.30
     const lngDelta = 0.32
     url.searchParams.set('viewbox', `${lng - lngDelta},${lat + latDelta},${lng + lngDelta},${lat - latDelta}`)
-    // bounded=0 mantém a busca regionalizada sem esconder um resultado válido fora da caixa.
     url.searchParams.set('bounded', '0')
   }
   const res = await fetch(url, {
@@ -101,7 +105,7 @@ async function nominatimSearch(q: string, lat: number | null, lng: number | null
       'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5',
     },
     cache: 'no-store',
-    signal: AbortSignal.timeout(3000),
+    signal: AbortSignal.timeout(2200),
   })
   if (!res.ok) return []
   const json = await res.json() as any[]
@@ -134,7 +138,7 @@ async function googleGeocode(q: string, lat: number | null, lng: number | null):
   if (lat !== null && lng !== null) {
     url.searchParams.set('bounds', `${lat - .15},${lng - .15}|${lat + .15},${lng + .15}`)
   }
-  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(2200) })
   if (!res.ok) return []
   const json = await res.json() as any
   return (json?.results || []).slice(0, 5).map((r: any) => {
@@ -154,6 +158,26 @@ async function googleGeocode(q: string, lat: number | null, lng: number | null):
   })
 }
 
+async function fastestForwardSearch(q: string, lat: number | null, lng: number | null) {
+  const mapboxPromise: Promise<ProviderResult> = mapboxSearch(q, lat, lng)
+    .then(rows => ({ provider: 'mapbox' as const, rows }))
+    .catch(() => ({ provider: 'mapbox' as const, rows: [] }))
+  const osmPromise: Promise<ProviderResult> = nominatimSearch(q, lat, lng)
+    .then(rows => ({ provider: 'nominatim' as const, rows }))
+    .catch(() => ({ provider: 'nominatim' as const, rows: [] }))
+
+  const first = await Promise.race([mapboxPromise, osmPromise])
+  const firstRows = cleanResults(first.rows)
+  if (firstRows.length > 0) return { results: firstRows, provider: first.provider }
+
+  const second = first.provider === 'mapbox' ? await osmPromise : await mapboxPromise
+  const secondRows = cleanResults(second.rows)
+  if (secondRows.length > 0) return { results: secondRows, provider: second.provider }
+
+  const google = cleanResults(await googleGeocode(q, lat, lng).catch(() => []))
+  return { results: google, provider: google.length ? 'google' : 'none' }
+}
+
 async function reverseLookup(lat: number, lng: number): Promise<SearchResult | null> {
   const token = await getMapboxAccessToken()
   if (token) {
@@ -164,7 +188,7 @@ async function reverseLookup(lat: number, lng: number): Promise<SearchResult | n
       url.searchParams.set('country', 'br')
       url.searchParams.set('language', 'pt-BR')
       url.searchParams.set('access_token', token)
-      const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+      const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(2200) })
       if (res.ok) {
         const json = await res.json() as any
         const f = json?.features?.[0]
@@ -195,7 +219,7 @@ async function reverseLookup(lat: number, lng: number): Promise<SearchResult | n
         'Accept-Language': 'pt-BR,pt;q=0.9',
       },
       cache: 'no-store',
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(2200),
     })
     if (res.ok) {
       const json = await res.json() as any
@@ -219,7 +243,7 @@ function response(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: status === 200
-      ? { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' }
+      ? { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
       : undefined,
   })
 }
@@ -240,31 +264,13 @@ export async function GET(request: NextRequest) {
   if (q.length > 180) return response({ error: 'Endereço muito longo.' }, 400)
 
   try {
-    // Caminho principal: Mapbox autocomplete. Se já houver boas opções, responde sem aguardar fallbacks.
-    const mapbox = cleanResults(await mapboxSearch(q, lat, lng).catch(() => []))
-    if (mapbox.length >= 3) {
-      return response({
-        results: mapbox,
-        regionalized: lat !== null && lng !== null,
-        provider: 'mapbox',
-        fast: true,
-        attribution: 'Mapbox',
-      })
-    }
-
-    // Fallback leve: uma única consulta Nominatim regionalizada, sem Overpass/POI pesado.
-    const osm = await nominatimSearch(q, lat, lng).catch(() => [])
-    let results = cleanResults([...mapbox, ...osm])
-
-    if (results.length === 0) {
-      results = cleanResults(await googleGeocode(q, lat, lng).catch(() => []))
-    }
-
+    const found = await fastestForwardSearch(q, lat, lng)
     return response({
-      results,
+      results: found.results,
       regionalized: lat !== null && lng !== null,
-      provider: mapbox.length ? 'mapbox+nominatim' : results.length ? 'nominatim/google' : 'none',
+      provider: found.provider,
       fast: true,
+      parallel: true,
       attribution: 'Mapbox / Google Maps / © OpenStreetMap contributors',
     })
   } catch {
