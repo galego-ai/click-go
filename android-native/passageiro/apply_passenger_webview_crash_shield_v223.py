@@ -1,14 +1,17 @@
 from pathlib import Path
 import re
 
+main_path = Path('app/src/main/java/com/clickgo/passageiro/MainActivity.java')
 build_path = Path('app/build.gradle')
+text = main_path.read_text(encoding='utf-8')
 build = build_path.read_text(encoding='utf-8')
 
 # v2.23 PRIME
 # - PassengerHomeMap and PassengerLiveMap now isolate WebView renderer failures;
 # - renderer death no longer needs to terminate the Activity;
 # - remote Leaflet bootstrap is bounded instead of retrying forever;
-# - detached first-party ad banner no longer submits work to a stopped executor.
+# - detached first-party ad banner no longer submits work to a stopped executor;
+# - adds a CI home mode that keeps real background polling/ad requests enabled.
 
 home = Path('app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java').read_text(encoding='utf-8')
 live = Path('app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java').read_text(encoding='utf-8')
@@ -19,7 +22,19 @@ if 'onRenderProcessGone' not in home or 'onRenderProcessGone' not in live:
 if 'RejectedExecutionException' not in ad or 'imageIo.isShutdown()' not in ad:
     raise SystemExit('ad executor crash guard is missing')
 
+# Existing home smoke intentionally bypasses network. Add a second debug-only mode
+# that opens the same Home with background services enabled and an invalid token.
+# Calls may fail with 401, but all such failures must stay contained and the app
+# process must remain alive.
+smoke = 'if(BuildConfig.DEBUG&&getIntent()!=null&&getIntent().getBooleanExtra("clickgo_home_smoke",false)){homeSmokeMode=true;token="smoke";origin=new GeoPoint(-14.52472,-49.14083);originLabel="Localização de teste";showHome();return;}'
+network_smoke = 'if(BuildConfig.DEBUG&&getIntent()!=null&&getIntent().getBooleanExtra("clickgo_home_network_smoke",false)){token="network-smoke-invalid-token";origin=new GeoPoint(-14.52472,-49.14083);originLabel="Localização de teste com serviços ativos";showHome();return;}'
+if 'clickgo_home_network_smoke' not in text:
+    if smoke not in text:
+        raise SystemExit('home smoke anchor not found')
+    text = text.replace(smoke, smoke + '\n        ' + network_smoke, 1)
+
 build = re.sub(r'versionCode\s+\d+', 'versionCode 223', build, count=1)
 build = re.sub(r"versionName\s+'[^']+'", "versionName '2.23-prime'", build, count=1)
+main_path.write_text(text, encoding='utf-8')
 build_path.write_text(build, encoding='utf-8')
-print('Passageiro v2.23 PRIME: proteção contra falha do WebView/renderer e corrida do banner aplicada.')
+print('Passageiro v2.23 PRIME: proteção WebView/banner e smoke com serviços reais aplicados.')
