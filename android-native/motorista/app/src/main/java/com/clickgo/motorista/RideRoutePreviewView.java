@@ -23,7 +23,7 @@ public final class RideRoutePreviewView extends View {
     public RideRoutePreviewView(Context context){
         super(context);
         route.setColor(Color.rgb(30,30,30));route.setStyle(Paint.Style.STROKE);route.setStrokeWidth(dp(4));route.setStrokeCap(Paint.Cap.ROUND);route.setStrokeJoin(Paint.Join.ROUND);
-        bg.setColor(Color.rgb(239,239,239));dot.setStyle(Paint.Style.FILL);setMinimumHeight(dp(112));
+        bg.setColor(Color.rgb(239,239,239));dot.setStyle(Paint.Style.FILL);setMinimumHeight((int)dp(112));
     }
 
     public void setPoints(JSONArray rows){pts.clear();if(rows!=null)for(int i=0;i<rows.length();i++){JSONObject p=rows.optJSONObject(i);if(p==null)continue;double lat=p.optDouble("lat",Double.NaN),lng=p.optDouble("lng",Double.NaN);if(Double.isFinite(lat)&&Double.isFinite(lng))pts.add(new double[]{lat,lng});}invalidate();}
