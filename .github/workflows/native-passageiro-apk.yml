@@ -108,7 +108,9 @@ jobs:
           grep -q "Motorista CLICK-GO" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "Seu motorista" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
           grep -q "driverDistText" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
-          grep -q "String onlineBody=ApiClient.absoluteGet" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "String onlineBody=ApiClient.absoluteGetAddress" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "absoluteGetAddress" app/src/main/java/com/clickgo/passageiro/ApiClient.java
+          grep -q "setReadTimeout(20000)" app/src/main/java/com/clickgo/passageiro/ApiClient.java
           grep -q 'destInput.setText("hospital")' app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
@@ -192,7 +194,7 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_address_network_smoke true | tee /tmp/address-network.txt
             grep -q "Status: ok" /tmp/address-network.txt
-            sleep 15
+            sleep 25
             timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
             adb pull /sdcard/address-network.xml /tmp/address-network.xml
             adb logcat -d | grep "CLICKGO_ADDRESS" || true
