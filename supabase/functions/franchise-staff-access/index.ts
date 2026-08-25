@@ -29,17 +29,25 @@ Deno.serve(async(req)=>{
    await admin.from('audit_logs').insert({actor_id:caller.user.id,action:'staff_complete_temp_password_change',entity:'profiles',entity_id:caller.user.id,metadata:{franchise_id:callerProfile.franchise_id}})
    return json({ok:true})
   }
-  if(!['super_admin','franchise_admin'].includes(appRole))return json({error:'Acesso sem permissão para gerenciar equipe'},403)
-  const franchiseId=String(body.franchise_id||callerProfile.franchise_id||'');if(!franchiseId)return json({error:'Franquia obrigatória'},400)
+  let managerFranchise=''
+  if(appRole==='operator'){
+   const{data:manager}=await admin.from('franchise_staff_permissions').select('franchise_id,staff_role,active').eq('profile_id',caller.user.id).maybeSingle()
+   if(!manager?.active||manager.staff_role!=='manager')return json({error:'Somente o gestor pode administrar a equipe'},403)
+   managerFranchise=String(manager.franchise_id||'')
+  }else if(!['super_admin','franchise_admin'].includes(appRole))return json({error:'Acesso sem permissão para gerenciar equipe'},403)
+  const franchiseId=String(body.franchise_id||callerProfile.franchise_id||managerFranchise||'');if(!franchiseId)return json({error:'Franquia obrigatória'},400)
   if(appRole==='franchise_admin'&&String(callerProfile.franchise_id)!==franchiseId)return json({error:'Você só pode gerenciar sua própria equipe'},403)
+  if(appRole==='operator'&&managerFranchise!==franchiseId)return json({error:'Você só pode gerenciar sua própria equipe'},403)
   if(action==='set_active'){
-   const profileId=String(body.profile_id||'');const active=Boolean(body.active);const{data:staff}=await admin.from('franchise_staff_permissions').select('profile_id,franchise_id').eq('profile_id',profileId).maybeSingle();if(!staff||String(staff.franchise_id)!==franchiseId)return json({error:'Funcionário não encontrado'},404)
+   const profileId=String(body.profile_id||'');const active=Boolean(body.active);if(profileId===caller.user.id&&!active)return json({error:'O gestor não pode desativar a própria conta'},400)
+   const{data:staff}=await admin.from('franchise_staff_permissions').select('profile_id,franchise_id').eq('profile_id',profileId).maybeSingle();if(!staff||String(staff.franchise_id)!==franchiseId)return json({error:'Funcionário não encontrado'},404)
    await admin.from('franchise_staff_permissions').update({active,updated_at:new Date().toISOString()}).eq('profile_id',profileId);await admin.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',profileId)
    await admin.from('audit_logs').insert({actor_id:caller.user.id,action:active?'activate_franchise_staff':'deactivate_franchise_staff',entity:'profiles',entity_id:profileId,metadata:{franchise_id:franchiseId}})
    return json({ok:true})
   }
   if(action!=='create_or_reset')return json({error:'Ação inválida'},400)
   const email=String(body.email||'').trim().toLowerCase();const fullName=String(body.full_name||'').trim();const staffRole=String(body.staff_role||'operator');if(!email||!fullName)return json({error:'Nome e e-mail são obrigatórios'},400);if(!roles.includes(staffRole))return json({error:'Função inválida'},400)
+  if(appRole==='operator'&&staffRole==='manager')return json({error:'Somente o administrador da franquia ou a Matriz pode criar outro gestor'},403)
   const supplied=String(body.temporary_password||'').trim();const password=supplied||tempPassword();const pe=passwordError(password);if(pe)return json({error:pe},400)
   const permissions={...defaults[staffRole],...(body.permissions&&typeof body.permissions==='object'?body.permissions:{})};const issuedAt=new Date().toISOString()
   const{data:existing}=await admin.from('profiles').select('id,email,role,franchise_id').eq('email',email).maybeSingle();let userId=existing?.id||'';let created=false
