@@ -128,12 +128,17 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
             grep -q "Status: ok" /tmp/start.txt
-            sleep 9
-            timeout 20 adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml /tmp/window.xml
-            grep -q "Motorista a caminho" /tmp/window.xml
-            grep -q "CANCELAR CORRIDA" /tmp/window.xml
-            grep -q "Motorista teste" /tmp/window.xml
+            found=0
+            for attempt in 1 2 3 4; do
+              sleep 5
+              timeout 20 adb shell uiautomator dump /sdcard/window.xml || true
+              adb pull /sdcard/window.xml /tmp/window.xml || true
+              if grep -q "Motorista a caminho" /tmp/window.xml 2>/dev/null && grep -q "CANCELAR CORRIDA" /tmp/window.xml 2>/dev/null && grep -q "Motorista teste" /tmp/window.xml 2>/dev/null; then
+                found=1
+                break
+              fi
+            done
+            test "$found" -eq 1
             adb shell input swipe 500 1300 500 850 300
             sleep 2
             timeout 20 adb shell uiautomator dump /sdcard/window2.xml
