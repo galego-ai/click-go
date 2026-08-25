@@ -49,3 +49,7 @@ home_path.write_text(home,encoding='utf-8')
 live_path.write_text(live,encoding='utf-8')
 build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.26 PRIME: distância ao tocar nos veículos aplicada.')
+
+next_patch=Path('apply_passenger_fast_address_v227.py')
+if next_patch.exists():
+    exec(compile(next_patch.read_text(encoding='utf-8'),str(next_patch),'exec'),{'__name__':'__main__'})
