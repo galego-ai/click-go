@@ -10,7 +10,36 @@ build=build_path.read_text(encoding='utf-8')
 # A consulta de autocomplete não pode prender a tela esperando o servidor.
 # Se o endpoint demorar, o fluxo existente cai rapidamente no Geocoder nativo.
 
-method='''\n    private String fastAddressGet(String urlString) throws Exception {\n        java.net.HttpURLConnection connection = null;\n        try {\n            connection = (java.net.HttpURLConnection) new java.net.URL(urlString).openConnection();\n            connection.setRequestMethod("GET");\n            connection.setConnectTimeout(1600);\n            connection.setReadTimeout(2200);\n            connection.setUseCaches(false);\n            connection.setInstanceFollowRedirects(true);\n            connection.setRequestProperty("Accept", "application/json");\n            connection.setRequestProperty("User-Agent", "CLICK-GO-Passageiro/2.28");\n            int code = connection.getResponseCode();\n            java.io.InputStream stream = code >= 200 && code < 300\n                    ? connection.getInputStream()\n                    : connection.getErrorStream();\n            if (stream == null) throw new java.io.IOException("HTTP " + code + " sem resposta");\n            java.io.BufferedReader reader = new java.io.BufferedReader(\n                    new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));\n            StringBuilder out = new StringBuilder();\n            String line;\n            while ((line = reader.readLine()) != null) out.append(line);\n            reader.close();\n            if (code < 200 || code >= 300) throw new java.io.IOException("HTTP " + code);\n            return out.toString();\n        } finally {\n            if (connection != null) connection.disconnect();\n        }\n    }\n'''
+method='''
+    private String fastAddressGet(String urlString) throws Exception {
+        java.net.HttpURLConnection connection = null;
+        try {
+            connection = (java.net.HttpURLConnection) new java.net.URL(urlString).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(1600);
+            connection.setReadTimeout(2200);
+            connection.setUseCaches(false);
+            connection.setInstanceFollowRedirects(true);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "CLICK-GO-Passageiro/2.28");
+            int code = connection.getResponseCode();
+            java.io.InputStream stream = code >= 200 && code < 300
+                    ? connection.getInputStream()
+                    : connection.getErrorStream();
+            if (stream == null) throw new java.io.IOException("HTTP " + code + " sem resposta");
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder out = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) out.append(line);
+            reader.close();
+            if (code < 200 || code >= 300) throw new java.io.IOException("HTTP " + code);
+            return out.toString();
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+'''
 
 # Insere antes do último fechamento da classe MainActivity. Isso é mais robusto do que
 # depender da assinatura/posição de um método que outros patches anteriores podem alterar.
@@ -36,3 +65,7 @@ build=re.sub(r"versionName\s+'[^']+'","versionName '2.28-prime'",build,count=1)
 main_path.write_text(text,encoding='utf-8')
 build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.28 PRIME: timeout rápido de geocodificação aplicado.')
+
+next_patch=Path('apply_passenger_online_search_v229.py')
+if next_patch.exists():
+    exec(compile(next_patch.read_text(encoding='utf-8'),str(next_patch),'exec'),{'__name__':'__main__'})
