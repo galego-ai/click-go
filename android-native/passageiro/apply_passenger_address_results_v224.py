@@ -89,9 +89,9 @@ replacement = r'''    private void showDestinationSearch() {
             destInput.setText("Avenida Tocantins");
             cancelAddressSearch();
             List<SearchItem> demo=new ArrayList<>();
-            demo.add(new SearchItem("Avenida Tocantins, Centro, Uruaçu - GO",-14.52390,-49.13910));
-            demo.add(new SearchItem("Avenida Tocantins, Setor Central, Uruaçu - GO",-14.52610,-49.14180));
-            demo.add(new SearchItem("Avenida Tocantins, Uruaçu - Goiás",-14.52080,-49.13670));
+            demo.add(new SearchItem("Avenida Tocantins, Centro, Uruaçu - GO","Avenida Tocantins","Centro, Uruaçu - GO","address",-14.52390,-49.13910));
+            demo.add(new SearchItem("Avenida Tocantins, Setor Central, Uruaçu - GO","Avenida Tocantins","Setor Central, Uruaçu - GO","address",-14.52610,-49.14180));
+            demo.add(new SearchItem("Avenida Tocantins, Uruaçu - Goiás","Avenida Tocantins","Uruaçu - Goiás","address",-14.52080,-49.13670));
             renderSearchResults(demo,results,false,null,null);
         }else{
             destInput.requestFocus();
