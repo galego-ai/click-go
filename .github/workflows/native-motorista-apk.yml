@@ -76,15 +76,19 @@ jobs:
           python3 apply_driver_history_address_fix_v28.py
           python3 apply_driver_chat_v29.py
           python3 apply_driver_passenger_offer_menu_v30.py
+          python3 apply_driver_finance_history_v31.py
+          grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.0-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.1-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v3.0-prime
-          path: apk-output/CLICK-GO-Motorista-native-v3.0-prime.apk
+          name: CLICK-GO-Motorista-native-v3.1-prime
+          path: apk-output/CLICK-GO-Motorista-native-v3.1-prime.apk
           if-no-files-found: error
