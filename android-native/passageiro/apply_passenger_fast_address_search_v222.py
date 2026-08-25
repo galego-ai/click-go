@@ -14,12 +14,15 @@ text=text.replace(
     1
 )
 
-# Mantém o mínimo de 3 caracteres para não bombardear o serviço e reduz o debounce.
-if 'ui.postDelayed(pendingAddressSearch, 280);' in text:
-    text=text.replace('ui.postDelayed(pendingAddressSearch, 280);','ui.postDelayed(pendingAddressSearch, 220);',1)
-elif 'ui.postDelayed(pendingAddressSearch,280);' in text:
-    text=text.replace('ui.postDelayed(pendingAddressSearch,280);','ui.postDelayed(pendingAddressSearch,220);',1)
-else:
+# Mantém o mínimo de 3 caracteres para não bombardear o serviço e reduz o debounce,
+# independentemente do valor deixado pelos patches anteriores.
+text,n=re.subn(
+    r'ui\.postDelayed\(pendingAddressSearch\s*,\s*\d+\s*\);',
+    'ui.postDelayed(pendingAddressSearch,220);',
+    text,
+    count=1
+)
+if n!=1:
     raise SystemExit('debounce atual de endereço não encontrado')
 
 # Cancela trabalho que ainda esteja na fila antes de enfileirar a nova consulta.
@@ -30,7 +33,8 @@ if needle in text:
 else:
     needle='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        if(normalized.length()<3){'''
     replacement='''        if(pendingAddressSearch!=null){ui.removeCallbacks(pendingAddressSearch);pendingAddressSearch=null;}\n        if(addressFuture!=null&&!addressFuture.isDone())addressFuture.cancel(false);\n        if(normalized.length()<3){'''
-    if needle in text:text=text.replace(needle,replacement,1)
+    if needle in text:
+        text=text.replace(needle,replacement,1)
 
 # Pede ao backend o caminho rápido, sem pesquisas pesadas de POI quando o usuário só está digitando endereço.
 old='''.append("?q=").append(URLEncoder.encode(query,StandardCharsets.UTF_8.toString()));'''
