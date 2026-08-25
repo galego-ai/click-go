@@ -91,6 +91,7 @@ jobs:
           python3 apply_passenger_map_layout_anr_fix_v218.py
           python3 apply_passenger_accept_ui_v219.py
           python3 apply_passenger_accept_transition_v219.py
+          python3 apply_passenger_accept_smoke_transition_v219.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -115,15 +116,17 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
             grep -q "Status: ok" /tmp/start.txt
-            sleep 8
+            sleep 9
             timeout 20 adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml /tmp/window.xml
-            grep -q "clickgo_active_ride_screen" /tmp/window.xml
-            adb shell input tap 300 250
+            grep -q "Motorista a caminho" /tmp/window.xml
+            grep -q "CANCELAR CORRIDA" /tmp/window.xml
+            grep -q "Motorista teste" /tmp/window.xml
+            adb shell input swipe 500 1300 500 850 300
             sleep 2
             timeout 20 adb shell uiautomator dump /sdcard/window2.xml
             adb pull /sdcard/window2.xml /tmp/window2.xml
-            grep -q "clickgo_active_ride_screen" /tmp/window2.xml
+            grep -q "Motorista a caminho" /tmp/window2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
