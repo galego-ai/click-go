@@ -25,6 +25,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       CLICKGO_FIREBASE_PROJECT_ID: ${{ secrets.CLICKGO_FIREBASE_PROJECT_ID }}
       CLICKGO_FIREBASE_APP_ID: ${{ secrets.CLICKGO_FIREBASE_PASSENGER_APP_ID }}
@@ -88,15 +89,52 @@ jobs:
           python3 apply_passenger_v216_compile_fix.py
           python3 apply_passenger_anr_hotfix_v217.py
           python3 apply_passenger_map_layout_anr_fix_v218.py
+          python3 apply_passenger_accept_ui_v219.py
+          python3 apply_passenger_accept_transition_v219.py
+          python3 apply_passenger_accept_smoke_transition_v219.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
+      - name: Enable KVM
+        if: github.event_name == 'pull_request'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Accepted ride responsiveness test
+        if: github.event_name == 'pull_request'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: |
+            adb install -r android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
+            grep -q "Status: ok" /tmp/start.txt
+            sleep 9
+            timeout 20 adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml /tmp/window.xml
+            grep -q "Motorista a caminho" /tmp/window.xml
+            grep -q "CANCELAR CORRIDA" /tmp/window.xml
+            grep -q "Motorista teste" /tmp/window.xml
+            adb shell input swipe 500 1300 500 850 300
+            sleep 2
+            timeout 20 adb shell uiautomator dump /sdcard/window2.xml
+            adb pull /sdcard/window2.xml /tmp/window2.xml
+            grep -q "Motorista a caminho" /tmp/window2.xml
+            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.18-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.19-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.18-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.18-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.19-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.19-prime.apk
           if-no-files-found: error
