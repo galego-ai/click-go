@@ -98,6 +98,7 @@ jobs:
           python3 apply_passenger_fast_address_search_v222.py
           python3 apply_passenger_webview_crash_shield_v223.py
           python3 apply_passenger_driver_distance_v226.py
+          python3 apply_passenger_management_sync_v230.py
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
@@ -112,6 +113,9 @@ jobs:
           grep -q "absoluteGetAddress" app/src/main/java/com/clickgo/passageiro/ApiClient.java
           grep -q "setReadTimeout(20000)" app/src/main/java/com/clickgo/passageiro/ApiClient.java
           grep -q 'destInput.setText("hospital")' app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "get_app_configuration_state" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "CLICKGO_MANAGEMENT" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "canRequestRideByManagement" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -206,9 +210,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.29-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.30-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.29-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.29-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.30-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.30-prime.apk
           if-no-files-found: error
