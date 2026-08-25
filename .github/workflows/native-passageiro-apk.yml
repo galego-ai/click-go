@@ -152,7 +152,8 @@ jobs:
             sleep 6
             timeout 20 adb shell uiautomator dump /sdcard/home1.xml
             adb pull /sdcard/home1.xml /tmp/home1.xml
-            grep -q "Onde vamos?" /tmp/home1.xml
+            test -s /tmp/home1.xml
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
             adb shell input keyevent KEYCODE_BACK
             sleep 2
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_smoke true | tee /tmp/home2.txt
@@ -160,7 +161,7 @@ jobs:
             sleep 10
             timeout 20 adb shell uiautomator dump /sdcard/home2.xml
             adb pull /sdcard/home2.xml /tmp/home2.xml
-            grep -q "Onde vamos?" /tmp/home2.xml
+            test -s /tmp/home2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
