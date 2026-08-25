@@ -1,5 +1,6 @@
 import './globals.css'
 import './management-extra.css'
+import './management-light.css'
 import AppShell from './AppShell'
 import PasswordEyes from '@/components/PasswordEyes'
 import AppNotifications from '@/components/AppNotifications'
