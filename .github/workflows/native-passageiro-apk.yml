@@ -108,6 +108,8 @@ jobs:
           grep -q "Motorista CLICK-GO" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "Seu motorista" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
           grep -q "driverDistText" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
+          grep -q "String onlineBody=ApiClient.absoluteGet" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q 'destInput.setText("hospital")' app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -193,6 +195,8 @@ jobs:
             sleep 15
             timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
             adb pull /sdcard/address-network.xml /tmp/address-network.xml
+            adb logcat -d | grep "CLICKGO_ADDRESS" || true
+            cat /tmp/address-network.xml
             grep -q "clickgo_search_on_map" /tmp/address-network.xml
             grep -q "endereco_resultado_1" /tmp/address-network.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
@@ -200,9 +204,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.26-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.29-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.26-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.26-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.29-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.29-prime.apk
           if-no-files-found: error
