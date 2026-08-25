@@ -3,19 +3,271 @@ import { getMapboxAccessToken } from '@/lib/map-provider-config'
 
 export const dynamic = 'force-dynamic'
 
-type SearchResult={label:string;name?:string;subtitle?:string;category?:string;kind:'place'|'address';lat:number;lng:number;distanceKm?:number}
-function parseCoord(value:string|null,min:number,max:number){if(value===null||value.trim()==='')return null;const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null}
-function normalize(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()}
-function regexEscape(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/"/g,'\\"')}
-function buildSearchUrl(q:string,lat:number|null,lng:number|null,bounded:boolean){const url=new URL('https://nominatim.openstreetmap.org/search');url.searchParams.set('format','jsonv2');url.searchParams.set('q',q);url.searchParams.set('countrycodes','br');url.searchParams.set('limit','7');url.searchParams.set('addressdetails','1');if(lat!==null&&lng!==null){const latDelta=.30,lngDelta=.32;url.searchParams.set('viewbox',`${lng-lngDelta},${lat+latDelta},${lng+lngDelta},${lat-latDelta}`);url.searchParams.set('bounded',bounded?'1':'0')}return url}
-async function nominatim(url:URL){const response=await fetch(url,{headers:{'User-Agent':'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)','Accept-Language':'pt-BR,pt;q=0.9,en;q=0.5'},cache:'no-store'});if(!response.ok)throw new Error('nominatim_unavailable');return await response.json() as any[]}
-function categorySelectors(query:string){const q=normalize(query),selectors:string[]=[];if(q.includes('farm')||q.includes('drog'))selectors.push('["amenity"="pharmacy"]');if(q.includes('merc')||q.includes('super')||q.includes('atacad'))selectors.push('["shop"="supermarket"]','["shop"="convenience"]');if(q.includes('hosp')||q.includes('pronto'))selectors.push('["amenity"="hospital"]','["healthcare"="hospital"]');if(q.includes('posto')||q.includes('combust'))selectors.push('["amenity"="fuel"]');if(q.includes('rest')||q.includes('lanch')||q.includes('pizz'))selectors.push('["amenity"="restaurant"]','["amenity"="fast_food"]');if(q.includes('hotel')||q.includes('pous'))selectors.push('["tourism"="hotel"]','["tourism"="guest_house"]');if(q.includes('banco')||q.includes('caixa'))selectors.push('["amenity"="bank"]','["amenity"="atm"]');if(q.includes('escol')||q.includes('coleg'))selectors.push('["amenity"="school"]','["amenity"="college"]');if(q.includes('rodov')||q.includes('terminal'))selectors.push('["amenity"="bus_station"]','["public_transport"="station"]');if(q.includes('shop')||q.includes('shopping'))selectors.push('["shop"="mall"]');return selectors}
-function overpassQuery(q:string,lat:number,lng:number){const radius=15000,escaped=regexEscape(q);const named=['shop','amenity','tourism','leisure','healthcare','office','craft','public_transport'].map(tag=>`nwr(around:${radius},${lat},${lng})["${tag}"]["name"~"${escaped}",i];`);const category=categorySelectors(q).map(sel=>`nwr(around:${radius},${lat},${lng})${sel};`);return `[out:json][timeout:9];(${[...category,...named].join('')});out center tags 45;`}
-function haversine(lat1:number,lng1:number,lat2:number,lng2:number){const r=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;return r*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
-function categoryLabel(tags:any){const raw=String(tags.shop||tags.amenity||tags.tourism||tags.leisure||tags.healthcare||tags.office||tags.craft||tags.public_transport||'local');const labels:Record<string,string>={pharmacy:'Farmácia',supermarket:'Supermercado',convenience:'Conveniência',hospital:'Hospital',fuel:'Posto de combustível',restaurant:'Restaurante',fast_food:'Lanchonete',hotel:'Hotel',guest_house:'Pousada',bank:'Banco',atm:'Caixa eletrônico',school:'Escola',college:'Faculdade',bus_station:'Rodoviária',station:'Estação',mall:'Shopping'};return labels[raw]||raw.replaceAll('_',' ')}
-function placeAddress(tags:any,context:string){const parts:string[]=[];const street=String(tags['addr:street']||'').trim(),number=String(tags['addr:housenumber']||'').trim();if(street)parts.push(number?`${street}, ${number}`:street);const suburb=String(tags['addr:suburb']||tags['addr:neighbourhood']||'').trim();if(suburb)parts.push(suburb);const city=String(tags['addr:city']||'').trim();if(city)parts.push(city);if(parts.length===0&&context)parts.push(context);return parts.join(' · ')}
-async function nearbyPlaces(q:string,lat:number,lng:number,context:string):Promise<SearchResult[]>{const body=new URLSearchParams({data:overpassQuery(q,lat,lng)});const response=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)'},body,cache:'no-store',signal:AbortSignal.timeout(9500)});if(!response.ok)return[];const json=await response.json() as any;const rows=Array.isArray(json?.elements)?json.elements:[],out:SearchResult[]=[],seen=new Set<string>();for(const row of rows){const tags=row.tags||{},name=String(tags.name||tags.brand||'').trim();if(!name)continue;const pLat=Number(row.lat??row.center?.lat),pLng=Number(row.lon??row.center?.lon);if(!Number.isFinite(pLat)||!Number.isFinite(pLng))continue;const key=`${name.toLowerCase()}|${pLat.toFixed(4)}|${pLng.toFixed(4)}`;if(seen.has(key))continue;seen.add(key);const category=categoryLabel(tags),address=placeAddress(tags,context),subtitle=[category,address].filter(Boolean).join(' · ');out.push({name,subtitle,category,kind:'place',label:address?`${name}, ${address}`:name,lat:pLat,lng:pLng,distanceKm:haversine(lat,lng,pLat,pLng)})}return out.sort((a,b)=>(a.distanceKm??999)-(b.distanceKm??999)).slice(0,5)}
-async function mapboxSearch(q:string,lat:number|null,lng:number|null):Promise<SearchResult[]>{const token=await getMapboxAccessToken();if(!token)return[];const url=new URL('https://api.mapbox.com/search/geocode/v6/forward');url.searchParams.set('q',q);url.searchParams.set('country','br');url.searchParams.set('limit','7');url.searchParams.set('autocomplete','true');url.searchParams.set('language','pt-BR');url.searchParams.set('access_token',token);if(lat!==null&&lng!==null)url.searchParams.set('proximity',`${lng},${lat}`);const res=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(6500)});if(!res.ok)return[];const json=await res.json() as any;return(json?.features||[]).map((f:any)=>{const c=f?.geometry?.coordinates||[],props=f?.properties||{},label=String(props.full_address||props.place_formatted||props.name||'').trim();return{label,name:String(props.name||'').trim()||undefined,subtitle:label,category:'Endereço',kind:'address' as const,lat:Number(c[1]),lng:Number(c[0]),distanceKm:lat!==null&&lng!==null?haversine(lat,lng,Number(c[1]),Number(c[0])):undefined}}).filter((r:SearchResult)=>r.label&&Number.isFinite(r.lat)&&Number.isFinite(r.lng))}
-async function googleGeocode(q:string,lat:number|null,lng:number|null):Promise<SearchResult[]>{const key=process.env.GOOGLE_MAPS_SERVER_API_KEY||process.env.GOOGLE_PLACES_API_KEY;if(!key)return[];const url=new URL('https://maps.googleapis.com/maps/api/geocode/json');url.searchParams.set('address',q);url.searchParams.set('region','br');url.searchParams.set('language','pt-BR');url.searchParams.set('key',key);if(lat!==null&&lng!==null)url.searchParams.set('bounds',`${lat-.15},${lng-.15}|${lat+.15},${lng+.15}`);const res=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(6500)});if(!res.ok)return[];const json=await res.json() as any;return(json?.results||[]).slice(0,7).map((r:any)=>({label:String(r.formatted_address||''),subtitle:String(r.formatted_address||''),category:'Endereço',kind:'address' as const,lat:Number(r.geometry?.location?.lat),lng:Number(r.geometry?.location?.lng),distanceKm:lat!==null&&lng!==null?haversine(lat,lng,Number(r.geometry?.location?.lat),Number(r.geometry?.location?.lng)):undefined})).filter((r:SearchResult)=>r.label&&Number.isFinite(r.lat)&&Number.isFinite(r.lng))}
-async function reverseLookup(lat:number,lng:number):Promise<SearchResult|null>{const token=await getMapboxAccessToken();if(token){try{const u=new URL('https://api.mapbox.com/search/geocode/v6/reverse');u.searchParams.set('longitude',String(lng));u.searchParams.set('latitude',String(lat));u.searchParams.set('country','br');u.searchParams.set('language','pt-BR');u.searchParams.set('access_token',token);const r=await fetch(u,{cache:'no-store',signal:AbortSignal.timeout(6000)});if(r.ok){const j=await r.json() as any,f=j?.features?.[0],c=f?.geometry?.coordinates;if(f&&c)return{label:String(f.properties?.full_address||f.properties?.place_formatted||f.properties?.name||'Minha localização'),kind:'address',category:'Localização atual',lat:Number(c[1]),lng:Number(c[0])}}}catch{}}try{const u=new URL('https://nominatim.openstreetmap.org/reverse');u.searchParams.set('format','jsonv2');u.searchParams.set('lat',String(lat));u.searchParams.set('lon',String(lng));u.searchParams.set('zoom','18');u.searchParams.set('addressdetails','1');const r=await fetch(u,{headers:{'User-Agent':'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)','Accept-Language':'pt-BR,pt;q=0.9'},cache:'no-store',signal:AbortSignal.timeout(6500)});if(r.ok){const j=await r.json() as any;if(j?.display_name)return{label:String(j.display_name),kind:'address',category:'Localização atual',lat,lng}}}catch{}const g=await googleGeocode(`${lat},${lng}`,lat,lng).catch(()=>[]);return g[0]||{label:'Minha localização atual',kind:'address',category:'Localização atual',lat,lng}}
-export async function GET(request:NextRequest){const reverse=request.nextUrl.searchParams.get('reverse')==='1',lat=parseCoord(request.nextUrl.searchParams.get('lat'),-90,90),lng=parseCoord(request.nextUrl.searchParams.get('lng'),-180,180);if(reverse){if(lat===null||lng===null)return NextResponse.json({error:'Localização inválida.'},{status:400});const result=await reverseLookup(lat,lng);return NextResponse.json({results:result?[result]:[],provider:'auto'})}const q=(request.nextUrl.searchParams.get('q')||'').trim();if(q.length<3)return NextResponse.json({error:'Digite pelo menos 3 caracteres.'},{status:400});if(q.length>180)return NextResponse.json({error:'Endereço muito longo.'},{status:400});const rawContext=(request.nextUrl.searchParams.get('context')||'').trim(),context=rawContext.length<=100?rawContext:'';try{const mapbox=await mapboxSearch(q,lat,lng).catch(()=>[]);let addressRows:any[]=[],usedLocalSearch=false,places:SearchResult[]=[];if(lat!==null&&lng!==null){const placePromise=nearbyPlaces(q,lat,lng,context).catch(()=>[]),regionalQuery=context?`${q}, ${context}`:q;try{addressRows=await nominatim(buildSearchUrl(regionalQuery,lat,lng,true));usedLocalSearch=addressRows.length>0}catch{}if(addressRows.length===0&&context){try{addressRows=await nominatim(buildSearchUrl(q,lat,lng,true));usedLocalSearch=addressRows.length>0}catch{}}places=await placePromise}if(addressRows.length===0){try{addressRows=await nominatim(buildSearchUrl(q,lat,lng,false))}catch{}}const osm:SearchResult[]=addressRows.map(r=>({label:String(r.display_name||''),name:String(r.name||'').trim()||undefined,subtitle:String(r.display_name||''),category:'Endereço',kind:'address' as const,lat:Number(r.lat),lng:Number(r.lon),distanceKm:lat!==null&&lng!==null?haversine(lat,lng,Number(r.lat),Number(r.lon)):undefined})).filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lng)&&r.label);let combined=[...mapbox,...places,...osm];if(combined.length===0)combined=await googleGeocode(q,lat,lng).catch(()=>[]);const seen=new Set<string>(),results=combined.filter(r=>{const key=`${r.label.toLowerCase()}|${r.lat.toFixed(4)}|${r.lng.toFixed(4)}`;if(seen.has(key))return false;seen.add(key);return true}).sort((a,b)=>(a.distanceKm??9999)-(b.distanceKm??9999)).slice(0,7);return NextResponse.json({results,regionalized:lat!==null&&lng!==null,localResults:usedLocalSearch||places.length>0,provider:mapbox.length?'mapbox+fallback':results.length?'fallback':'none',attribution:'Mapbox / Google Maps / © OpenStreetMap contributors'})}catch{return NextResponse.json({error:'Serviço de endereços temporariamente indisponível.'},{status:502})}}
+type SearchResult = {
+  label: string
+  name?: string
+  subtitle?: string
+  category?: string
+  kind: 'place' | 'address'
+  lat: number
+  lng: number
+  distanceKm?: number
+}
+
+function parseCoord(value: string | null, min: number, max: number) {
+  if (value === null || value.trim() === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) && n >= min && n <= max ? n : null
+}
+
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const r = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function cleanResults(rows: SearchResult[], limit = 5) {
+  const seen = new Set<string>()
+  return rows
+    .filter(r => r.label && Number.isFinite(r.lat) && Number.isFinite(r.lng))
+    .filter(r => {
+      const key = `${r.label.toLowerCase()}|${r.lat.toFixed(4)}|${r.lng.toFixed(4)}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999))
+    .slice(0, limit)
+}
+
+async function mapboxSearch(q: string, lat: number | null, lng: number | null): Promise<SearchResult[]> {
+  const token = await getMapboxAccessToken()
+  if (!token) return []
+  const url = new URL('https://api.mapbox.com/search/geocode/v6/forward')
+  url.searchParams.set('q', q)
+  url.searchParams.set('country', 'br')
+  url.searchParams.set('limit', '5')
+  url.searchParams.set('autocomplete', 'true')
+  url.searchParams.set('language', 'pt-BR')
+  url.searchParams.set('access_token', token)
+  if (lat !== null && lng !== null) url.searchParams.set('proximity', `${lng},${lat}`)
+  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+  if (!res.ok) return []
+  const json = await res.json() as any
+  return (json?.features || []).map((f: any) => {
+    const c = f?.geometry?.coordinates || []
+    const props = f?.properties || {}
+    const label = String(props.full_address || props.place_formatted || props.name || '').trim()
+    const rLat = Number(c[1])
+    const rLng = Number(c[0])
+    return {
+      label,
+      name: String(props.name || '').trim() || undefined,
+      subtitle: label,
+      category: 'Endereço',
+      kind: 'address' as const,
+      lat: rLat,
+      lng: rLng,
+      distanceKm: lat !== null && lng !== null && Number.isFinite(rLat) && Number.isFinite(rLng)
+        ? haversine(lat, lng, rLat, rLng)
+        : undefined,
+    }
+  })
+}
+
+async function nominatimSearch(q: string, lat: number | null, lng: number | null): Promise<SearchResult[]> {
+  const url = new URL('https://nominatim.openstreetmap.org/search')
+  url.searchParams.set('format', 'jsonv2')
+  url.searchParams.set('q', q)
+  url.searchParams.set('countrycodes', 'br')
+  url.searchParams.set('limit', '5')
+  url.searchParams.set('addressdetails', '1')
+  if (lat !== null && lng !== null) {
+    const latDelta = 0.30
+    const lngDelta = 0.32
+    url.searchParams.set('viewbox', `${lng - lngDelta},${lat + latDelta},${lng + lngDelta},${lat - latDelta}`)
+    // bounded=0 mantém a busca regionalizada sem esconder um resultado válido fora da caixa.
+    url.searchParams.set('bounded', '0')
+  }
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5',
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(3000),
+  })
+  if (!res.ok) return []
+  const json = await res.json() as any[]
+  return (Array.isArray(json) ? json : []).map((r: any) => {
+    const rLat = Number(r.lat)
+    const rLng = Number(r.lon)
+    return {
+      label: String(r.display_name || '').trim(),
+      name: String(r.name || '').trim() || undefined,
+      subtitle: String(r.display_name || '').trim(),
+      category: 'Endereço',
+      kind: 'address' as const,
+      lat: rLat,
+      lng: rLng,
+      distanceKm: lat !== null && lng !== null && Number.isFinite(rLat) && Number.isFinite(rLng)
+        ? haversine(lat, lng, rLat, rLng)
+        : undefined,
+    }
+  })
+}
+
+async function googleGeocode(q: string, lat: number | null, lng: number | null): Promise<SearchResult[]> {
+  const key = process.env.GOOGLE_MAPS_SERVER_API_KEY || process.env.GOOGLE_PLACES_API_KEY
+  if (!key) return []
+  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
+  url.searchParams.set('address', q)
+  url.searchParams.set('region', 'br')
+  url.searchParams.set('language', 'pt-BR')
+  url.searchParams.set('key', key)
+  if (lat !== null && lng !== null) {
+    url.searchParams.set('bounds', `${lat - .15},${lng - .15}|${lat + .15},${lng + .15}`)
+  }
+  const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+  if (!res.ok) return []
+  const json = await res.json() as any
+  return (json?.results || []).slice(0, 5).map((r: any) => {
+    const rLat = Number(r.geometry?.location?.lat)
+    const rLng = Number(r.geometry?.location?.lng)
+    return {
+      label: String(r.formatted_address || ''),
+      subtitle: String(r.formatted_address || ''),
+      category: 'Endereço',
+      kind: 'address' as const,
+      lat: rLat,
+      lng: rLng,
+      distanceKm: lat !== null && lng !== null && Number.isFinite(rLat) && Number.isFinite(rLng)
+        ? haversine(lat, lng, rLat, rLng)
+        : undefined,
+    }
+  })
+}
+
+async function reverseLookup(lat: number, lng: number): Promise<SearchResult | null> {
+  const token = await getMapboxAccessToken()
+  if (token) {
+    try {
+      const url = new URL('https://api.mapbox.com/search/geocode/v6/reverse')
+      url.searchParams.set('longitude', String(lng))
+      url.searchParams.set('latitude', String(lat))
+      url.searchParams.set('country', 'br')
+      url.searchParams.set('language', 'pt-BR')
+      url.searchParams.set('access_token', token)
+      const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3500) })
+      if (res.ok) {
+        const json = await res.json() as any
+        const f = json?.features?.[0]
+        const c = f?.geometry?.coordinates
+        if (f && c) {
+          return {
+            label: String(f.properties?.full_address || f.properties?.place_formatted || f.properties?.name || 'Minha localização'),
+            kind: 'address',
+            category: 'Localização atual',
+            lat: Number(c[1]),
+            lng: Number(c[0]),
+          }
+        }
+      }
+    } catch {}
+  }
+
+  try {
+    const url = new URL('https://nominatim.openstreetmap.org/reverse')
+    url.searchParams.set('format', 'jsonv2')
+    url.searchParams.set('lat', String(lat))
+    url.searchParams.set('lon', String(lng))
+    url.searchParams.set('zoom', '18')
+    url.searchParams.set('addressdetails', '1')
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
+    })
+    if (res.ok) {
+      const json = await res.json() as any
+      if (json?.display_name) {
+        return {
+          label: String(json.display_name),
+          kind: 'address',
+          category: 'Localização atual',
+          lat,
+          lng,
+        }
+      }
+    }
+  } catch {}
+
+  const google = await googleGeocode(`${lat},${lng}`, lat, lng).catch(() => [])
+  return google[0] || { label: 'Minha localização atual', kind: 'address', category: 'Localização atual', lat, lng }
+}
+
+function response(payload: Record<string, unknown>, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: status === 200
+      ? { 'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60' }
+      : undefined,
+  })
+}
+
+export async function GET(request: NextRequest) {
+  const reverse = request.nextUrl.searchParams.get('reverse') === '1'
+  const lat = parseCoord(request.nextUrl.searchParams.get('lat'), -90, 90)
+  const lng = parseCoord(request.nextUrl.searchParams.get('lng'), -180, 180)
+
+  if (reverse) {
+    if (lat === null || lng === null) return response({ error: 'Localização inválida.' }, 400)
+    const result = await reverseLookup(lat, lng)
+    return response({ results: result ? [result] : [], provider: 'auto' })
+  }
+
+  const q = (request.nextUrl.searchParams.get('q') || '').trim()
+  if (q.length < 3) return response({ error: 'Digite pelo menos 3 caracteres.' }, 400)
+  if (q.length > 180) return response({ error: 'Endereço muito longo.' }, 400)
+
+  try {
+    // Caminho principal: Mapbox autocomplete. Se já houver boas opções, responde sem aguardar fallbacks.
+    const mapbox = cleanResults(await mapboxSearch(q, lat, lng).catch(() => []))
+    if (mapbox.length >= 3) {
+      return response({
+        results: mapbox,
+        regionalized: lat !== null && lng !== null,
+        provider: 'mapbox',
+        fast: true,
+        attribution: 'Mapbox',
+      })
+    }
+
+    // Fallback leve: uma única consulta Nominatim regionalizada, sem Overpass/POI pesado.
+    const osm = await nominatimSearch(q, lat, lng).catch(() => [])
+    let results = cleanResults([...mapbox, ...osm])
+
+    if (results.length === 0) {
+      results = cleanResults(await googleGeocode(q, lat, lng).catch(() => []))
+    }
+
+    return response({
+      results,
+      regionalized: lat !== null && lng !== null,
+      provider: mapbox.length ? 'mapbox+nominatim' : results.length ? 'nominatim/google' : 'none',
+      fast: true,
+      attribution: 'Mapbox / Google Maps / © OpenStreetMap contributors',
+    })
+  } catch {
+    return response({ error: 'Serviço de endereços temporariamente indisponível.' }, 502)
+  }
+}

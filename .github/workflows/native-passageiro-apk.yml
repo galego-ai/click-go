@@ -25,7 +25,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       CLICKGO_FIREBASE_PROJECT_ID: ${{ secrets.CLICKGO_FIREBASE_PROJECT_ID }}
       CLICKGO_FIREBASE_APP_ID: ${{ secrets.CLICKGO_FIREBASE_PASSENGER_APP_ID }}
@@ -92,6 +92,11 @@ jobs:
           python3 apply_passenger_accept_ui_v219.py
           python3 apply_passenger_accept_transition_v219.py
           python3 apply_passenger_accept_smoke_transition_v219.py
+          python3 apply_passenger_relaunch_history_v220.py
+          python3 apply_passenger_v220_compile_fix.py
+          python3 apply_passenger_home_ads_v221.py
+          python3 apply_passenger_fast_address_search_v222.py
+          grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -129,12 +134,42 @@ jobs:
             grep -q "Motorista a caminho" /tmp/window2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
+      - name: Home clear-and-reopen stability test
+        if: github.event_name == 'pull_request'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: |
+            adb install -r android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_smoke true | tee /tmp/home1.txt
+            grep -q "Status: ok" /tmp/home1.txt
+            sleep 6
+            timeout 20 adb shell uiautomator dump /sdcard/home1.xml
+            adb pull /sdcard/home1.xml /tmp/home1.xml
+            test -s /tmp/home1.xml
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
+            adb shell input keyevent KEYCODE_BACK
+            sleep 2
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_smoke true | tee /tmp/home2.txt
+            grep -q "Status: ok" /tmp/home2.txt
+            sleep 10
+            timeout 20 adb shell uiautomator dump /sdcard/home2.xml
+            adb pull /sdcard/home2.xml /tmp/home2.xml
+            test -s /tmp/home2.xml
+            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.19-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.22-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.19-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.19-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.22-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.22-prime.apk
           if-no-files-found: error
