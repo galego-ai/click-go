@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * First-party CLICK-GO banner slot. No AdMob/SDK dependency and no ad-network billing.
@@ -35,6 +36,7 @@ public final class FirstPartyAdBannerView extends FrameLayout {
     private final TextView sponsor;
     private String targetUrl = "";
     private volatile int loadSeq;
+    private volatile boolean detached;
 
     public FirstPartyAdBannerView(Context context) {
         super(context);
@@ -66,6 +68,7 @@ public final class FirstPartyAdBannerView extends FrameLayout {
 
     public void setBanner(JSONObject banner) {
         final int seq=++loadSeq;
+        if(detached)return;
         if(banner==null){setVisibility(GONE);targetUrl="";image.setImageDrawable(null);return;}
         String label=banner.optString("title","Oferta CLICK-GO").trim();
         String advertiser=banner.optString("advertiser_name","").trim();
@@ -76,11 +79,15 @@ public final class FirstPartyAdBannerView extends FrameLayout {
         setContentDescription("Anúncio: "+title.getText());
         setVisibility(VISIBLE);
         image.setImageDrawable(null);
-        if(!imageUrl.startsWith("https://"))return;
-        imageIo.execute(() -> {
-            Bitmap bitmap=downloadSmallBitmap(imageUrl);
-            post(() -> {if(seq==loadSeq&&bitmap!=null&&isAttachedToWindow())image.setImageBitmap(bitmap);});
-        });
+        if(!imageUrl.startsWith("https://")||imageIo.isShutdown())return;
+        try {
+            imageIo.execute(() -> {
+                Bitmap bitmap=downloadSmallBitmap(imageUrl);
+                post(() -> {if(!detached&&seq==loadSeq&&bitmap!=null&&isAttachedToWindow())image.setImageBitmap(bitmap);});
+            });
+        } catch (RejectedExecutionException ignored) {
+            // A tela saiu enquanto o backend terminava de carregar o anúncio.
+        }
     }
 
     private Bitmap downloadSmallBitmap(String value){
@@ -101,7 +108,12 @@ public final class FirstPartyAdBannerView extends FrameLayout {
         try{Intent i=new Intent(Intent.ACTION_VIEW, Uri.parse(u));getContext().startActivity(i);}catch(Exception ignored){}
     }
 
-    @Override protected void onDetachedFromWindow(){super.onDetachedFromWindow();++loadSeq;try{imageIo.shutdownNow();}catch(Exception ignored){}}
+    @Override protected void onDetachedFromWindow(){
+        detached=true;
+        super.onDetachedFromWindow();
+        ++loadSeq;
+        try{imageIo.shutdownNow();}catch(Exception ignored){}
+    }
 
     private GradientDrawable round(int fill,int radius,int stroke){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}

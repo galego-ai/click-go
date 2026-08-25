@@ -96,7 +96,11 @@ jobs:
           python3 apply_passenger_v220_compile_fix.py
           python3 apply_passenger_home_ads_v221.py
           python3 apply_passenger_fast_address_search_v222.py
+          python3 apply_passenger_webview_crash_shield_v223.py
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
+          grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
+          grep -q "clickgo_home_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -164,12 +168,23 @@ jobs:
             test -s /tmp/home2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
+            adb shell input keyevent KEYCODE_BACK
+            sleep 2
+            adb logcat -c
+            adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_network_smoke true | tee /tmp/home-network.txt
+            grep -q "Status: ok" /tmp/home-network.txt
+            sleep 12
+            timeout 20 adb shell uiautomator dump /sdcard/home-network.xml
+            adb pull /sdcard/home-network.xml /tmp/home-network.xml
+            test -s /tmp/home-network.xml
+            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.22-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.23-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.22-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.22-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.23-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.23-prime.apk
           if-no-files-found: error
