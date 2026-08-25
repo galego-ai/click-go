@@ -78,19 +78,22 @@ jobs:
           python3 apply_driver_passenger_offer_menu_v30.py
           python3 apply_driver_finance_history_v31.py
           python3 apply_driver_home_ads_v32.py
+          python3 apply_driver_passenger_cancel_popup_v33.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "Corrida cancelada pelo passageiro" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "rideState" app/src/main/java/com/clickgo/motorista/DriverRepository.java
       - name: Build native driver APK
         working-directory: android-native/motorista
         run: gradle --no-daemon :app:assembleDebug
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.2-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.3-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v3.2-prime
-          path: apk-output/CLICK-GO-Motorista-native-v3.2-prime.apk
+          name: CLICK-GO-Motorista-native-v3.3-prime
+          path: apk-output/CLICK-GO-Motorista-native-v3.3-prime.apk
           if-no-files-found: error
