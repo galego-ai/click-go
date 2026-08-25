@@ -93,6 +93,7 @@ jobs:
           python3 apply_passenger_accept_transition_v219.py
           python3 apply_passenger_accept_smoke_transition_v219.py
           python3 apply_passenger_relaunch_history_v220.py
+          python3 apply_passenger_v220_compile_fix.py
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
