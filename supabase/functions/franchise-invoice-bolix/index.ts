@@ -59,11 +59,21 @@ Deno.serve(async(req)=>{
   if(invoice){const updated=await admin.from("franchise_invoices").update(invoicePayload).eq("id",invoice.id).select("*").single();if(updated.error)return json({error:updated.error.message},500);invoice=updated.data}
   else{const inserted=await admin.from("franchise_invoices").insert(invoicePayload).select("*").single();if(inserted.error)return json({error:inserted.error.message},500);invoice=inserted.data}
 
-  const {data:billing,error:billingError}=await admin.from("franchise_billing_profiles").select("franchise_id,payer_type,name,corporate_name,document,email,phone,street,number,neighborhood,zipcode,city,state,complement").eq("franchise_id",franchiseId).maybeSingle();
-  if(billingError)return json({error:billingError.message},500);
-  const bp=billing as BillingProfile|null;
-  const complete=Boolean(bp&&bp.document&&bp.email&&bp.phone&&bp.street&&bp.number&&bp.neighborhood&&bp.zipcode&&bp.city&&bp.state&&((bp.payer_type==="cpf"&&bp.name)||(bp.payer_type==="cnpj"&&bp.corporate_name)));
-  if(!complete)return json({error:"Complete os dados fiscais e o endereço para emitir o boleto.",billing_profile_required:true},422);
+  const {data:existing}=await admin.from("franchise_invoice_bolix_charges").select("*").eq("invoice_id",invoice.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(action==="status"&&!existing)return json({paid:false,invoice,summary,charge:null});
+  if(action==="create"){
+   const {data:activePix}=await admin.from("franchise_invoice_pix_charges").select("id,txid,status").eq("invoice_id",invoice.id).eq("status","active").order("created_at",{ascending:false}).limit(1).maybeSingle();
+   if(activePix)return json({error:"Existe um Pix ativo para esta fatura. Use essa cobrança ou aguarde expirar/cancelar antes de emitir boleto/Bolix.",payment_channel:"pix",txid:activePix.txid},409);
+  }
+
+  let bp:BillingProfile|null=null;
+  if(action==="create"){
+   const {data:billing,error:billingError}=await admin.from("franchise_billing_profiles").select("franchise_id,payer_type,name,corporate_name,document,email,phone,street,number,neighborhood,zipcode,city,state,complement").eq("franchise_id",franchiseId).maybeSingle();
+   if(billingError)return json({error:billingError.message},500);
+   bp=billing as BillingProfile|null;
+   const complete=Boolean(bp&&bp.document&&bp.email&&bp.phone&&bp.street&&bp.number&&bp.neighborhood&&bp.zipcode&&bp.city&&bp.state&&((bp.payer_type==="cpf"&&bp.name)||(bp.payer_type==="cnpj"&&bp.corporate_name)));
+   if(!complete)return json({error:"Complete os dados fiscais e o endereço para emitir o boleto.",billing_profile_required:true},422);
+  }
 
   const clientId=(Deno.env.get("EFI_BILLING_CLIENT_ID")||Deno.env.get("EFI_CLIENT_ID")||"").trim();
   const clientSecret=(Deno.env.get("EFI_BILLING_CLIENT_SECRET")||Deno.env.get("EFI_CLIENT_SECRET")||"").trim();
@@ -107,9 +117,7 @@ Deno.serve(async(req)=>{
    return {error:false,charge:updated.data||{...charge,...update},provider_status:providerStatus,paid:local==="paid",auto_reactivated:autoReactivate};
   };
 
-  const {data:existing}=await admin.from("franchise_invoice_bolix_charges").select("*").eq("invoice_id",invoice.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(action==="status"){
-   if(!existing)return json({paid:false,invoice,summary,charge:null,sandbox});
    const synced=await syncCharge(existing as BolixRow);
    if(synced.error)return json({error:"Falha ao consultar o boleto na Efí",provider_status:synced.status,provider_error:providerError(synced.provider),charge:existing},502);
    return json({paid:synced.paid,invoice:{...invoice,status:synced.paid?"paid":invoice.status},summary,charge:synced.charge,sandbox,auto_reactivated:synced.auto_reactivated});
