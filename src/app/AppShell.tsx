@@ -6,35 +6,31 @@ import RoleGate from '@/components/RoleGate'
 import AuthAssist from '@/components/AuthAssist'
 
 const primary=[
- ['📊 Dashboard Geral','/dashboard'],
- ['🌍 Franquias e Licenças','/franquias'],
- ['⚙️ Configurações Globais','/configuracoes'],
- ['📋 Planos e Preços','/planos'],
- ['📈 Relatórios Consolidados','/relatorios'],
- ['🛡️ Auditoria','/auditoria'],
- ['👥 Usuários Matriz','/acessos'],
- ['🔧 Suporte Técnico','/suporte'],
+ ['Início','/dashboard'],
+ ['Franquias','/franquias'],
+ ['Operação','/mapa'],
+ ['Financeiro','/financeiro'],
+ ['Suporte','/suporte'],
 ] as const
 
-const advanced=[
- ['Mapa ao vivo','/mapa'],
- ['Operação e corridas','/corridas'],
- ['Financeiro','/financeiro'],
+const administration=[
+ ['Planos e preços','/planos'],
+ ['Configurações','/configuracoes'],
+ ['Relatórios','/relatorios'],
+ ['Auditoria','/auditoria'],
+ ['Usuários da matriz','/acessos'],
  ['Cidades e territórios','/cidades'],
  ['Motoristas','/motoristas'],
  ['Passageiros','/passageiros'],
  ['Tarifas e categorias','/tarifas'],
- ['Pagamentos','/pagamentos'],
- ['Repasses','/repasses'],
- ['Antecipações','/antecipacoes'],
+ ['Pagamentos e repasses','/pagamentos'],
  ['Apps e sincronização','/ecossistema'],
- ['Cupons e promoções','/promocoes'],
- ['Notificações push','/notificacoes-push'],
+ ['Campanhas e notificações','/promocoes'],
 ] as const
 
 export default function AppShell({children}:{children:React.ReactNode}){
  const pathname=usePathname(),assist=<AuthAssist/>
  if(pathname==='/'||pathname.startsWith('/franqueado')||pathname.startsWith('/passageiro')||pathname.startsWith('/motorista-app')||pathname.startsWith('/acompanhar')||pathname==='/login'||pathname==='/redefinir-senha')return <>{children}{assist}</>
- const active=(href:string)=>pathname===href||pathname.startsWith(href+'/'),advancedOpen=advanced.some(([,href])=>active(href))
- return <RoleGate role="super_admin" loginPath="/login"><div className="shell shell-light"><aside className="sidebar sidebar-compact"><Link href="/dashboard" className="brand"><span className="brand-badge">CG</span><div><strong>CLICK-GO Gestão</strong><small>Matriz</small></div></Link><nav className="nav nav-compact"><div className="nav-primary">{primary.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div><details className="nav-details matrix-advanced" open={advancedOpen}><summary>Ferramentas avançadas</summary><div className="nav-details-items">{advanced.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div></details></nav></aside><main className="main">{children}</main>{assist}</div></RoleGate>
+ const active=(href:string)=>pathname===href||pathname.startsWith(href+'/'),adminOpen=administration.some(([,href])=>active(href))
+ return <RoleGate role="super_admin" loginPath="/login"><div className="simple-shell"><aside className="simple-sidebar"><Link href="/dashboard" className="simple-brand"><span className="simple-brand-mark">CG</span><div><strong>CLICK-GO</strong><small>Gestão da Matriz</small></div></Link><nav className="simple-nav">{primary.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}<details className="simple-more" open={adminOpen}><summary>Administração</summary><div>{administration.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div></details></nav></aside><main className="simple-main">{children}</main>{assist}</div></RoleGate>
 }
