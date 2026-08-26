@@ -9,15 +9,15 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 }
 
-async function syncAdminCityAccess(admin:any, profileId:string, franchiseId:string){
-  const { data:cities, error:cityError } = await admin.from('franchise_cities').select('city_id').eq('franchise_id', franchiseId)
+async function syncAdminCityAccess(admin: any, profileId: string, franchiseId: string) {
+  const { data: cities, error: cityError } = await admin.from('franchise_cities').select('city_id').eq('franchise_id', franchiseId)
   if (cityError) throw cityError
-  const { error:deleteError } = await admin.from('profile_city_access').delete().eq('profile_id', profileId)
+  const { error: deleteError } = await admin.from('profile_city_access').delete().eq('profile_id', profileId)
   if (deleteError) throw deleteError
-  const rows=(cities||[]).map((x:any)=>({profile_id:profileId,city_id:x.city_id}))
-  if(rows.length){
-    const { error:insertError } = await admin.from('profile_city_access').upsert(rows,{onConflict:'profile_id,city_id'})
-    if(insertError) throw insertError
+  const rows = (cities || []).map((x: any) => ({ profile_id: profileId, city_id: x.city_id }))
+  if (rows.length) {
+    const { error: insertError } = await admin.from('profile_city_access').upsert(rows, { onConflict: 'profile_id,city_id' })
+    if (insertError) throw insertError
   }
 }
 
@@ -43,12 +43,12 @@ Deno.serve(async (req) => {
       .single()
     if (profileError || !callerProfile || !callerProfile.active) return json({ error: 'Perfil administrativo inválido ou inativo' }, 403)
 
-    const tokenRole=String(callerData.user.app_metadata?.role||'')
-    const profileRole=String(callerProfile.role||'')
-    if(!tokenRole || tokenRole!==profileRole) return json({error:'Sessão desatualizada. Saia e entre novamente.'},403)
+    const tokenRole = String(callerData.user.app_metadata?.role || '')
+    const profileRole = String(callerProfile.role || '')
+    if (!tokenRole || tokenRole !== profileRole) return json({ error: 'Sessão desatualizada. Saia e entre novamente.' }, 403)
 
     const body = await req.json()
-    const action = body.action
+    const action = String(body.action || '')
     const isSuperAdmin = profileRole === 'super_admin' && tokenRole === 'super_admin'
     const isFranchiseAdmin = profileRole === 'franchise_admin' && tokenRole === 'franchise_admin'
 
@@ -141,11 +141,11 @@ Deno.serve(async (req) => {
       })
       if (error) throw error
       const userId = data.user.id
-      try{
+      try {
         const { error: newProfileError } = await admin.from('profiles').upsert({ id: userId, full_name, phone, email: String(email).toLowerCase(), role: 'franchise_admin', franchise_id, city_id: city_id || null, active: true })
         if (newProfileError) throw newProfileError
-        await syncAdminCityAccess(admin,userId,String(franchise_id))
-      }catch(e){
+        await syncAdminCityAccess(admin, userId, String(franchise_id))
+      } catch (e) {
         await admin.auth.admin.deleteUser(userId)
         throw e
       }
@@ -168,34 +168,94 @@ Deno.serve(async (req) => {
       if (authError) throw authError
       const { error: updateError } = await admin.from('profiles').update({ franchise_id, city_id: null, active: true, updated_at: new Date().toISOString() }).eq('id', user_id)
       if (updateError) throw updateError
-      await syncAdminCityAccess(admin,String(user_id),String(franchise_id))
+      await syncAdminCityAccess(admin, String(user_id), String(franchise_id))
       await admin.from('audit_logs').insert({ actor_id: callerData.user.id, action: 'change_franchise_admin', entity: 'profiles', entity_id: user_id, metadata: { franchise_id } })
       return json({ ok: true })
     }
 
     if (action === 'block_user' || action === 'unblock_user') {
-      const { user_id } = body
-      if (!user_id) throw new Error('user_id obrigatório')
-      const ban = action === 'block_user' ? '876000h' : 'none'
-      const { error } = await admin.auth.admin.updateUserById(user_id, { ban_duration: ban })
-      if (error) throw error
-      await admin.from('profiles').update({ active: action !== 'block_user' }).eq('id', user_id)
-      if (action === 'block_user') await admin.from('drivers').update({ status: 'blocked', online: false }).eq('id', user_id)
-      await admin.from('audit_logs').insert({ actor_id: callerData.user.id, action, entity: 'profiles', entity_id: user_id })
-      return json({ ok: true })
+      const userId = String(body.user_id || '')
+      if (!userId) throw new Error('user_id obrigatório')
+      if (userId === callerData.user.id) return json({ error: 'Você não pode bloquear ou reativar a própria conta por esta ação.' }, 400)
+
+      const { data: target, error: targetError } = await admin.from('profiles').select('id,role,franchise_id,active').eq('id', userId).maybeSingle()
+      if (targetError) throw targetError
+      if (!target) return json({ error: 'Usuário não encontrado' }, 404)
+
+      const active = action === 'unblock_user'
+      const ban = active ? 'none' : '876000h'
+      const { error: authError } = await admin.auth.admin.updateUserById(userId, { ban_duration: ban })
+      if (authError) throw authError
+
+      const { error: profileUpdateError } = await admin.from('profiles').update({ active, updated_at: new Date().toISOString() }).eq('id', userId)
+      if (profileUpdateError) throw profileUpdateError
+
+      if (target.role === 'driver') {
+        const { error: driverError } = await admin.from('drivers').update({ status: active ? 'pending' : 'blocked', online: false }).eq('id', userId)
+        if (driverError) throw driverError
+      }
+
+      await admin.from('audit_logs').insert({
+        actor_id: callerData.user.id,
+        action,
+        entity: 'profiles',
+        entity_id: userId,
+        metadata: { target_role: target.role, franchise_id: target.franchise_id, active },
+      })
+      return json({ ok: true, active, target_role: target.role })
+    }
+
+    if (action === 'set_profile_city_access') {
+      const profileId = String(body.profile_id || '')
+      const cityId = String(body.city_id || '')
+      const enabled = body.enabled !== false
+      if (!profileId || !cityId) return json({ error: 'Usuário e cidade são obrigatórios' }, 400)
+
+      const { data: target, error: targetError } = await admin.from('profiles').select('id,role,franchise_id,active').eq('id', profileId).maybeSingle()
+      if (targetError) throw targetError
+      if (!target) return json({ error: 'Usuário não encontrado' }, 404)
+      if (target.role !== 'operator' || !target.franchise_id) return json({ error: 'O acesso individual por cidade é exclusivo para funcionários da franquia.' }, 400)
+
+      const { data: linkedCity, error: linkedCityError } = await admin
+        .from('franchise_cities')
+        .select('city_id')
+        .eq('franchise_id', target.franchise_id)
+        .eq('city_id', cityId)
+        .maybeSingle()
+      if (linkedCityError) throw linkedCityError
+      if (!linkedCity) return json({ error: 'A cidade não pertence à franquia deste funcionário.' }, 403)
+
+      if (enabled) {
+        const { error: accessError } = await admin.from('profile_city_access').upsert({ profile_id: profileId, city_id: cityId }, { onConflict: 'profile_id,city_id' })
+        if (accessError) throw accessError
+      } else {
+        const { error: accessError } = await admin.from('profile_city_access').delete().eq('profile_id', profileId).eq('city_id', cityId)
+        if (accessError) throw accessError
+      }
+
+      await admin.from('audit_logs').insert({
+        actor_id: callerData.user.id,
+        action: enabled ? 'grant_profile_city_access' : 'revoke_profile_city_access',
+        entity: 'profile_city_access',
+        entity_id: profileId,
+        metadata: { franchise_id: target.franchise_id, city_id: cityId },
+      })
+      return json({ ok: true, enabled })
     }
 
     if (action === 'delete_user') {
-      const { user_id } = body
-      if (!user_id) throw new Error('user_id obrigatório')
-      const { error } = await admin.auth.admin.deleteUser(user_id, true)
+      const userId = String(body.user_id || '')
+      if (!userId) throw new Error('user_id obrigatório')
+      if (userId === callerData.user.id) return json({ error: 'Você não pode excluir a própria conta.' }, 400)
+      const { error } = await admin.auth.admin.deleteUser(userId, true)
       if (error) throw error
-      await admin.from('audit_logs').insert({ actor_id: callerData.user.id, action: 'delete_user', entity: 'auth.users', entity_id: user_id })
+      await admin.from('audit_logs').insert({ actor_id: callerData.user.id, action: 'delete_user', entity: 'auth.users', entity_id: userId })
       return json({ ok: true })
     }
 
     return json({ error: 'Ação inválida' }, 400)
   } catch (e) {
+    console.error(e)
     return json({ error: e instanceof Error ? e.message : 'Erro interno' }, 400)
   }
 })
