@@ -69,12 +69,13 @@ export default function DriverAppPage() {
   async function uploadDocument(e:FormEvent){
     e.preventDefault();if(!file||!profile){setMessage('Selecione um arquivo.');return}
     setLoading(true);setMessage('Enviando documento...')
+    let uploadedPath=''
     try{
-      const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');const path=`${profile.id}/${docType}-${Date.now()}.${ext}`
+      const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');const path=`${profile.id}/${docType}-${Date.now()}.${ext}`;uploadedPath=path
       const {error:up}=await supabase.storage.from('driver-documents').upload(path,file,{upsert:false,contentType:file.type||undefined});if(up)throw up
-      const {error:db}=await supabase.from('driver_documents').insert({driver_id:profile.id,document_type:docType,file_path:path,status:'pending'});if(db){await supabase.storage.from('driver-documents').remove([path]);throw db}
+      const {error:db}=await supabase.rpc('upsert_my_driver_document',{p_document_type:docType,p_file_path:path});if(db){await supabase.storage.from('driver-documents').remove([path]);throw db}
       setFile(null);const element=document.getElementById('driver-document-file') as HTMLInputElement|null;if(element)element.value='';setMessage('Documento enviado. O franqueado poderá analisá-lo agora.');await loadDriver(profile.id)
-    }catch(e:any){setMessage(e.message||'Erro ao enviar documento.')}finally{setLoading(false)}
+    }catch(e:any){if(uploadedPath)await supabase.storage.from('driver-documents').remove([uploadedPath]);setMessage(e.message||'Erro ao enviar documento.')}finally{setLoading(false)}
   }
 
   async function logout(){await supabase.auth.signOut();setMessage('Sessão encerrada.');setAuthMode('login');setActive('Início')}
