@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "jsr:@supabase/supabase-js@2.112.4";
 
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json"}});
 const b64=(v:string)=>btoa(unescape(encodeURIComponent(v)));
@@ -56,6 +56,12 @@ Deno.serve(async(req)=>{
   if(invoice){const updated=await admin.from("franchise_invoices").update(invoicePayload).eq("id",invoice.id).select("*").single();if(updated.error)return json({error:updated.error.message},500);invoice=updated.data}
   else{const inserted=await admin.from("franchise_invoices").insert(invoicePayload).select("*").single();if(inserted.error)return json({error:inserted.error.message},500);invoice=inserted.data}
 
+  const {data:existing}=await admin.from("franchise_invoice_pix_charges").select("*").eq("invoice_id",invoice.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(action==="create"){
+   const {data:activeBolix}=await admin.from("franchise_invoice_bolix_charges").select("id,charge_id,status").eq("invoice_id",invoice.id).eq("status","active").order("created_at",{ascending:false}).limit(1).maybeSingle();
+   if(activeBolix)return json({error:"Existe um boleto/Bolix ativo para esta fatura. Use essa cobrança ou aguarde/cancele antes de gerar um Pix separado.",payment_channel:"bolix",charge_id:activeBolix.charge_id},409);
+  }
+
   const missing=required.filter(name=>!(Deno.env.get(name)||"").trim());
   if(missing.length)return json({error:"Efí não está totalmente configurada",missing},503);
   const sandbox=Deno.env.get("EFI_SANDBOX")==="true";
@@ -85,6 +91,7 @@ Deno.serve(async(req)=>{
    const endToEnd=pix?.endToEndId||pix?.endToEndID||null;
    const update:any={status:local,provider_status:providerStatus,end_to_end_id:endToEnd,raw_response:provider};
    if(paidAt)update.paid_at=paidAt;
+   const firstPaid=local==="paid"&&charge.status!=="paid";
    const updated=await admin.from("franchise_invoice_pix_charges").update(update).eq("id",charge.id).select("*").single();
    if(local==="paid"){
     await admin.from("franchise_invoices").update({status:"paid",paid_at:paidAt}).eq("id",invoice.id);
@@ -94,12 +101,11 @@ Deno.serve(async(req)=>{
      await admin.from("franchises").update({license_status:"active",active:true,blocked_at:null,blocked_reason:null,updated_at:new Date().toISOString()}).eq("id",franchiseId).neq("license_status","cancelled");
      await admin.from("franchise_subscriptions").update({license_status:"active",updated_at:new Date().toISOString()}).eq("franchise_id",franchiseId).eq("status","active");
     }
-    await admin.from("audit_logs").insert({actor_id:user.id,action:"franchise_invoice_pix_paid",entity:"franchise_invoices",entity_id:invoice.id,metadata:{franchise_id:franchiseId,invoice_id:invoice.id,txid:charge.txid,amount:charge.amount,end_to_end_id:endToEnd,auto_reactivated:autoReactivate,source:role==="super_admin"?"matrix":"franchise"}});
+    if(firstPaid)await admin.from("audit_logs").insert({actor_id:user.id,action:"franchise_invoice_pix_paid",entity:"franchise_invoices",entity_id:invoice.id,metadata:{franchise_id:franchiseId,invoice_id:invoice.id,txid:charge.txid,amount:charge.amount,end_to_end_id:endToEnd,auto_reactivated:autoReactivate,source:role==="super_admin"?"matrix":"franchise"}});
    }
    return {error:false,charge:updated.data||{...charge,...update},provider_status:providerStatus,paid:local==="paid"};
   };
 
-  const {data:existing}=await admin.from("franchise_invoice_pix_charges").select("*").eq("invoice_id",invoice.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(action==="status"){
    if(!existing)return json({paid:false,invoice,summary,charge:null,sandbox});
    const synced=await syncCharge(existing as ChargeRow);
