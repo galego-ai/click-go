@@ -88,9 +88,13 @@ Deno.serve(async(req)=>{
    const updated=await admin.from("franchise_invoice_pix_charges").update(update).eq("id",charge.id).select("*").single();
    if(local==="paid"){
     await admin.from("franchise_invoices").update({status:"paid",paid_at:paidAt}).eq("id",invoice.id);
-    await admin.from("franchises").update({license_status:"active",active:true,blocked_at:null,blocked_reason:null,updated_at:new Date().toISOString()}).eq("id",franchiseId).neq("license_status","cancelled");
-    await admin.from("franchise_subscriptions").update({license_status:"active",updated_at:new Date().toISOString()}).eq("franchise_id",franchiseId).eq("status","active");
-    await admin.from("audit_logs").insert({actor_id:user.id,action:"franchise_invoice_pix_paid",entity:"franchise_invoices",entity_id:invoice.id,metadata:{franchise_id:franchiseId,invoice_id:invoice.id,txid:charge.txid,amount:charge.amount,end_to_end_id:endToEnd,source:role==="super_admin"?"matrix":"franchise"}});
+    const {data:rule}=await admin.from("franchise_collection_rules").select("auto_reactivate_on_payment").eq("franchise_id",franchiseId).maybeSingle();
+    const autoReactivate=rule?.auto_reactivate_on_payment!==false;
+    if(autoReactivate){
+     await admin.from("franchises").update({license_status:"active",active:true,blocked_at:null,blocked_reason:null,updated_at:new Date().toISOString()}).eq("id",franchiseId).neq("license_status","cancelled");
+     await admin.from("franchise_subscriptions").update({license_status:"active",updated_at:new Date().toISOString()}).eq("franchise_id",franchiseId).eq("status","active");
+    }
+    await admin.from("audit_logs").insert({actor_id:user.id,action:"franchise_invoice_pix_paid",entity:"franchise_invoices",entity_id:invoice.id,metadata:{franchise_id:franchiseId,invoice_id:invoice.id,txid:charge.txid,amount:charge.amount,end_to_end_id:endToEnd,auto_reactivated:autoReactivate,source:role==="super_admin"?"matrix":"franchise"}});
    }
    return {error:false,charge:updated.data||{...charge,...update},provider_status:providerStatus,paid:local==="paid"};
   };
