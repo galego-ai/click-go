@@ -1,4 +1,5 @@
 import FranchiseLicenseCenter from '@/components/FranchiseLicenseCenter'
+import MatrixSupportCenter from '@/components/MatrixSupportCenter'
 
 export default function Page(){
  return <>
@@ -9,6 +10,7 @@ export default function Page(){
     <p className="subtitle">Rede multiempresa por cidade ou região, com licença, implantação, cobrança, território, suporte e sincronização dos apps.</p>
    </div>
   </div>
+  <MatrixSupportCenter/>
   <FranchiseLicenseCenter/>
  </>
 }
