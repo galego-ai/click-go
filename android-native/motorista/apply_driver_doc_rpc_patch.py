@@ -27,9 +27,10 @@ new_avatar='''        ApiClient.rpc("upsert_my_driver_document", new JSONObject(
                 .put("p_document_type", "profile_photo")
                 .put("p_file_path", documentPath), token);
 '''
-if old_avatar not in text:
-    raise SystemExit('Bloco direto de profile_photo não encontrado')
-text=text.replace(old_avatar,new_avatar,1)
+if old_avatar in text:
+    text=text.replace(old_avatar,new_avatar,1)
+elif new_avatar not in text:
+    raise SystemExit('Fluxo de profile_photo não reconhecido')
 
 old_doc='''        JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq." + documentType + "&select=id&order=created_at.desc&limit=1", token));
         JSONObject payload = new JSONObject()
@@ -51,16 +52,18 @@ new_doc='''        ApiClient.rpc("upsert_my_driver_document", new JSONObject()
                 .put("p_document_type", documentType)
                 .put("p_file_path", objectPath), token);
 '''
-if old_doc not in text:
-    raise SystemExit('Bloco direto de documento não encontrado')
-text=text.replace(old_doc,new_doc,1)
+if old_doc in text:
+    text=text.replace(old_doc,new_doc,1)
+elif new_doc not in text:
+    raise SystemExit('Fluxo de documento não reconhecido')
+
 path.write_text(text,encoding='utf-8')
 
 build_path=Path('app/build.gradle')
 build=build_path.read_text(encoding='utf-8')
-m=re.search(r'versionCode\\s+(\\d+)',build)
+m=re.search(r'versionCode\s+(\d+)',build)
 if m:
     build=build[:m.start(1)]+str(int(m.group(1))+1)+build[m.end(1):]
-build=re.sub(r"versionName\\s+'[^']+'","versionName '1.0-prime'",build,count=1)
+build=re.sub(r"versionName\s+'[^']+'","versionName '1.0-prime'",build,count=1)
 build_path.write_text(build,encoding='utf-8')
 print('Motorista v1.0 PRIME: documentos registrados via RPC segura.')
