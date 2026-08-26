@@ -10,10 +10,14 @@ export default function RoleGate({role,loginPath,children}:{role:Role|Role[];log
  const router=useRouter();const pathname=usePathname();const[ready,setReady]=useState(false)
  useEffect(()=>{let alive=true;async function verify(){
   const{data:{user}}=await supabase.auth.getUser();if(!alive)return;if(!user){router.replace(loginPath);return}
-  let currentRole=user.app_metadata?.role as string|undefined;let profile:any=null
-  if(!currentRole||currentRole==='operator'){const{data}=await supabase.from('profiles').select('role,franchise_id,active').eq('id',user.id).maybeSingle();profile=data;currentRole=currentRole||profile?.role}
+  const{data:profile,error:profileError}=await supabase.from('profiles').select('role,franchise_id,active').eq('id',user.id).maybeSingle();if(!alive)return
+  if(profileError||!profile){await supabase.auth.signOut();router.replace(loginPath);return}
+  const metadataRole=user.app_metadata?.role as string|undefined
+  if(metadataRole&&profile.role&&metadataRole!==profile.role){await supabase.auth.signOut();router.replace(loginPath);return}
+  const currentRole=(metadataRole||profile.role) as string|undefined
   const allowed=Array.isArray(role)?role:[role];if(!currentRole||!allowed.includes(currentRole as Role)){router.replace(loginPath);return}
-  if(profile&&profile.active===false){await supabase.auth.signOut();router.replace(loginPath);return}
+  if(profile.active===false){await supabase.auth.signOut();router.replace(loginPath);return}
+  if(currentRole==='franchise_admin'&&!profile.franchise_id){await supabase.auth.signOut();router.replace(loginPath);return}
   if(currentRole==='operator'){
    const{data:staff}=await supabase.from('franchise_staff_permissions').select('active').eq('profile_id',user.id).maybeSingle();if(!staff?.active){await supabase.auth.signOut();router.replace(loginPath);return}
   }

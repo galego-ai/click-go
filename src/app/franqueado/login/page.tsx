@@ -9,10 +9,14 @@ export default function FranchiseLoginPage(){
  async function login(e:FormEvent){
   e.preventDefault();setBusy(true);setMsg('Entrando...')
   const{data,error}=await supabase.auth.signInWithPassword({email,password});if(error){setMsg(error.message);setBusy(false);return}
-  let role=data.user.app_metadata?.role as string|undefined;let profile:any=null
-  if(!role||role==='operator'){const{data:p}=await supabase.from('profiles').select('role,active,franchise_id').eq('id',data.user.id).maybeSingle();profile=p;role=role||p?.role}
+  const{data:profile,error:profileError}=await supabase.from('profiles').select('role,active,franchise_id').eq('id',data.user.id).maybeSingle()
+  if(profileError||!profile){await supabase.auth.signOut();setMsg('Não foi possível validar o perfil regional.');setBusy(false);return}
+  const metadataRole=data.user.app_metadata?.role as string|undefined
+  if(metadataRole&&profile.role&&metadataRole!==profile.role){await supabase.auth.signOut();setMsg('O perfil da conta precisa ser sincronizado antes do acesso.');setBusy(false);return}
+  const role=metadataRole||profile.role
   if(!['franchise_admin','operator'].includes(role||'')){await supabase.auth.signOut();setMsg(role==='super_admin'?'Esta conta é da Matriz. Entre pelo acesso Super Admin.':'Esta conta não pertence à Gestão Regional CLICK-GO.');setBusy(false);return}
-  if(profile?.active===false){await supabase.auth.signOut();setMsg('Este acesso está inativo. Fale com o administrador da operação.');setBusy(false);return}
+  if(profile.active===false){await supabase.auth.signOut();setMsg('Este acesso está inativo. Fale com o administrador da operação.');setBusy(false);return}
+  if(role==='franchise_admin'&&!profile.franchise_id){await supabase.auth.signOut();setMsg('Esta conta regional não está vinculada a uma franquia.');setBusy(false);return}
   if(role==='operator'){const{data:staff}=await supabase.from('franchise_staff_permissions').select('active,staff_role').eq('profile_id',data.user.id).maybeSingle();if(!staff?.active){await supabase.auth.signOut();setMsg('Este acesso da equipe está desativado.');setBusy(false);return}}
   if(data.user.app_metadata?.must_change_password===true){window.location.href='/franqueado/trocar-senha-temporaria';return}
   window.location.href='/franqueado'
