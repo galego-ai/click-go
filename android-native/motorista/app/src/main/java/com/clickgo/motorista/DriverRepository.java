@@ -46,24 +46,9 @@ public final class DriverRepository {
         String publicUrl = BuildConfig.SUPABASE_URL + "/storage/v1/object/public/driver-avatars/" + avatarPath + "?v=" + System.currentTimeMillis();
         ApiClient.restPatch("profiles?id=eq." + userId, new JSONObject().put("avatar_url", publicUrl), token);
 
-        JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq.profile_photo&select=id&order=created_at.desc&limit=1", token));
-        if (existing.length() == 0) {
-            ApiClient.restPost("driver_documents", new JSONObject()
-                    .put("driver_id", userId)
-                    .put("document_type", "profile_photo")
-                    .put("file_path", documentPath)
-                    .put("status", "pending"), token);
-        } else {
-            String documentId = existing.getJSONObject(0).optString("id", "");
-            if (!documentId.isBlank()) {
-                ApiClient.restPatch("driver_documents?id=eq." + documentId, new JSONObject()
-                        .put("file_path", documentPath)
-                        .put("status", "pending")
-                        .put("rejection_reason", JSONObject.NULL)
-                        .put("reviewed_by", JSONObject.NULL)
-                        .put("reviewed_at", JSONObject.NULL), token);
-            }
-        }
+        ApiClient.rpc("upsert_my_driver_document", new JSONObject()
+                .put("p_document_type", "profile_photo")
+                .put("p_file_path", documentPath), token);
         return publicUrl;
     }
 
@@ -77,21 +62,9 @@ public final class DriverRepository {
         String objectPath = userId + "/" + documentType + "." + ext;
         ApiClient.storageUpload("driver-documents", objectPath, bytes, safeMime, token);
 
-        JSONArray existing = new JSONArray(ApiClient.restGet("driver_documents?driver_id=eq." + userId + "&document_type=eq." + documentType + "&select=id&order=created_at.desc&limit=1", token));
-        JSONObject payload = new JSONObject()
-                .put("file_path", objectPath)
-                .put("status", "pending")
-                .put("rejection_reason", JSONObject.NULL)
-                .put("reviewed_by", JSONObject.NULL)
-                .put("reviewed_at", JSONObject.NULL);
-        if (existing.length() == 0) {
-            payload.put("driver_id", userId).put("document_type", documentType);
-            ApiClient.restPost("driver_documents", payload, token);
-        } else {
-            String id = existing.getJSONObject(0).optString("id", "");
-            if (id.isBlank()) throw new Exception("Documento existente inválido.");
-            ApiClient.restPatch("driver_documents?id=eq." + id, payload, token);
-        }
+        ApiClient.rpc("upsert_my_driver_document", new JSONObject()
+                .put("p_document_type", documentType)
+                .put("p_file_path", objectPath), token);
     }
 
     public static JSONObject wallet(String token) {
