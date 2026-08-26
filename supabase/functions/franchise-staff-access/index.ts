@@ -13,6 +13,23 @@ const defaults:Record<string,Record<string,boolean>>={
 function tempPassword(){const b=crypto.getRandomValues(new Uint8Array(10));const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let s='';for(const x of b)s+=a[x%a.length];return `Cg!${s}#7`}
 function passwordError(v:string){if(v.length<8)return 'A senha deve ter pelo menos 8 caracteres';if(v.length>72)return 'A senha deve ter no máximo 72 caracteres';if(!/[A-Za-z]/.test(v)||!/[0-9]/.test(v))return 'Use letras e números na senha';return null}
 
+async function ensureCityAccess(admin:any,profileId:string,franchiseId:string){
+ const[{data:cities,error:cityError},{data:existing,error:accessError}]=await Promise.all([
+  admin.from('franchise_cities').select('city_id').eq('franchise_id',franchiseId),
+  admin.from('profile_city_access').select('city_id').eq('profile_id',profileId),
+ ])
+ if(cityError)throw cityError;if(accessError)throw accessError
+ const allowed=new Set((cities||[]).map((x:any)=>String(x.city_id)))
+ const current=(existing||[]).map((x:any)=>String(x.city_id))
+ const invalid=current.filter((id:string)=>!allowed.has(id))
+ if(invalid.length){const{error}=await admin.from('profile_city_access').delete().eq('profile_id',profileId).in('city_id',invalid);if(error)throw error}
+ const valid=current.filter((id:string)=>allowed.has(id))
+ if(valid.length===0&&allowed.size>0){
+  const rows=[...allowed].map(city_id=>({profile_id:profileId,city_id}))
+  const{error}=await admin.from('profile_city_access').upsert(rows,{onConflict:'profile_id,city_id'});if(error)throw error
+ }
+}
+
 Deno.serve(async(req)=>{
  if(req.method==='OPTIONS')return new Response('ok',{headers:cors})
  try{
@@ -20,7 +37,9 @@ Deno.serve(async(req)=>{
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{autoRefreshToken:false,persistSession:false}})
   const{data:caller}=await admin.auth.getUser(token);if(!caller.user)return json({error:'Sessão inválida'},401)
   const{data:callerProfile}=await admin.from('profiles').select('role,franchise_id,active').eq('id',caller.user.id).maybeSingle();if(!callerProfile?.active)return json({error:'Perfil inativo'},403)
-  const appRole=String(caller.user.app_metadata?.role||callerProfile.role||'');const body=await req.json();const action=String(body.action||'')
+  const tokenRole=String(caller.user.app_metadata?.role||'');const profileRole=String(callerProfile.role||'');
+  if(!tokenRole||tokenRole!==profileRole)return json({error:'Sessão desatualizada. Saia e entre novamente.'},403)
+  const appRole=profileRole;const body=await req.json();const action=String(body.action||'')
   if(action==='complete_change'){
    if(appRole!=='operator')return json({error:'Acesso restrito à equipe regional'},403)
    const password=String(body.new_password||'');const pe=passwordError(password);if(pe)return json({error:pe},400)
@@ -42,6 +61,7 @@ Deno.serve(async(req)=>{
    const profileId=String(body.profile_id||'');const active=Boolean(body.active);if(profileId===caller.user.id&&!active)return json({error:'O gestor não pode desativar a própria conta'},400)
    const{data:staff}=await admin.from('franchise_staff_permissions').select('profile_id,franchise_id').eq('profile_id',profileId).maybeSingle();if(!staff||String(staff.franchise_id)!==franchiseId)return json({error:'Funcionário não encontrado'},404)
    await admin.from('franchise_staff_permissions').update({active,updated_at:new Date().toISOString()}).eq('profile_id',profileId);await admin.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',profileId)
+   if(active)await ensureCityAccess(admin,profileId,franchiseId)
    await admin.from('audit_logs').insert({actor_id:caller.user.id,action:active?'activate_franchise_staff':'deactivate_franchise_staff',entity:'profiles',entity_id:profileId,metadata:{franchise_id:franchiseId}})
    return json({ok:true})
   }
@@ -55,6 +75,7 @@ Deno.serve(async(req)=>{
   }else{const{data:createdUser,error:createError}=await admin.auth.admin.createUser({email,password,email_confirm:true,app_metadata:{role:'operator',franchise_id:franchiseId,staff_role:staffRole,must_change_password:true,temp_password_issued_at:issuedAt},user_metadata:{full_name:fullName}});if(createError)throw createError;userId=createdUser.user.id;created=true}
   const{error:profileError}=await admin.from('profiles').upsert({id:userId,full_name:fullName,email,role:'operator',franchise_id:franchiseId,city_id:null,active:true,updated_at:issuedAt});if(profileError){if(created)await admin.auth.admin.deleteUser(userId);throw profileError}
   const{error:permError}=await admin.from('franchise_staff_permissions').upsert({profile_id:userId,franchise_id:franchiseId,staff_role:staffRole,permissions,active:true,created_by:caller.user.id,updated_at:issuedAt});if(permError)throw permError
+  await ensureCityAccess(admin,userId,franchiseId)
   await admin.from('audit_logs').insert({actor_id:caller.user.id,action:created?'create_franchise_staff':'reset_franchise_staff_access',entity:'profiles',entity_id:userId,metadata:{franchise_id:franchiseId,email,staff_role:staffRole,permissions,must_change_password:true}})
   return json({ok:true,user_id:userId,email,temporary_password:password,staff_role:staffRole,permissions,created})
  }catch(e){console.error(e);return json({error:e instanceof Error?e.message:'Erro interno'},400)}
