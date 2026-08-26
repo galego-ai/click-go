@@ -4,7 +4,7 @@ const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'au
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json'}})
 const roles=['manager','operator','financial','support','marketing']
 const defaults:Record<string,Record<string,boolean>>={
- manager:{operation:true,drivers:true,users:true,pricing:true,finance:true,support:true,marketing:true,reports:true,settings:true},
+ manager:{operation:true,drivers:true,users:true,pricing:false,finance:true,support:true,marketing:true,reports:true,settings:true},
  operator:{operation:true,drivers:true,users:true,pricing:false,finance:false,support:false,marketing:false,reports:false,settings:false},
  financial:{operation:false,drivers:false,users:false,pricing:false,finance:true,support:false,marketing:false,reports:true,settings:false},
  support:{operation:true,drivers:false,users:true,pricing:false,finance:false,support:true,marketing:false,reports:false,settings:false},
@@ -49,7 +49,7 @@ Deno.serve(async(req)=>{
   const email=String(body.email||'').trim().toLowerCase();const fullName=String(body.full_name||'').trim();const staffRole=String(body.staff_role||'operator');if(!email||!fullName)return json({error:'Nome e e-mail são obrigatórios'},400);if(!roles.includes(staffRole))return json({error:'Função inválida'},400)
   if(appRole==='operator'&&staffRole==='manager')return json({error:'Somente o administrador da franquia ou a Matriz pode criar outro gestor'},403)
   const supplied=String(body.temporary_password||'').trim();const password=supplied||tempPassword();const pe=passwordError(password);if(pe)return json({error:pe},400)
-  const permissions={...defaults[staffRole],...(body.permissions&&typeof body.permissions==='object'?body.permissions:{})};const issuedAt=new Date().toISOString()
+  const permissions={...defaults[staffRole],...(body.permissions&&typeof body.permissions==='object'?body.permissions:{})};if(staffRole==='manager')permissions.pricing=false;const issuedAt=new Date().toISOString()
   const{data:existing}=await admin.from('profiles').select('id,email,role,franchise_id').eq('email',email).maybeSingle();let userId=existing?.id||'';let created=false
   if(existing){if(existing.role!=='operator'||String(existing.franchise_id)!==franchiseId)return json({error:'Este e-mail já pertence a outro tipo de conta ou operação'},409);const{data:authUser,error:readError}=await admin.auth.admin.getUserById(existing.id);if(readError||!authUser.user)return json({error:'Conta de login inconsistente'},409);const{error:updateError}=await admin.auth.admin.updateUserById(existing.id,{password,app_metadata:{...authUser.user.app_metadata,role:'operator',franchise_id:franchiseId,staff_role:staffRole,must_change_password:true,temp_password_issued_at:issuedAt}});if(updateError)throw updateError
   }else{const{data:createdUser,error:createError}=await admin.auth.admin.createUser({email,password,email_confirm:true,app_metadata:{role:'operator',franchise_id:franchiseId,staff_role:staffRole,must_change_password:true,temp_password_issued_at:issuedAt},user_metadata:{full_name:fullName}});if(createError)throw createError;userId=createdUser.user.id;created=true}
