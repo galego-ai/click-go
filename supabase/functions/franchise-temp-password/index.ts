@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
       if (!isSuperAdmin) return json({ error: 'Acesso restrito ao Super Admin' }, 403)
       const franchiseId = String(body.franchise_id || '')
       if (!franchiseId) return json({ error: 'Franquia obrigatória' }, 400)
+      const reason = String(body.reason || body.p_reason || '').trim()
+      if (reason.length < 3) return json({ error: 'Informe uma justificativa para gerar ou redefinir o acesso.' }, 400)
 
       const { data: franchise, error: franchiseError } = await admin
         .from('franchises')
@@ -101,6 +103,7 @@ Deno.serve(async (req) => {
           source: 'matrix',
           mode: target ? 'reset' : 'create',
           password_mode: requestedPassword ? 'manual' : 'generated',
+          reason,
           issued_at: issuedAt,
         },
       })
@@ -194,6 +197,7 @@ Deno.serve(async (req) => {
           must_change_password: true,
           issued_at: issuedAt,
           password_mode: requestedPassword ? 'manual' : 'generated',
+          reason,
         },
       })
       if (auditError) console.error('audit success log:', auditError.message)
