@@ -1,4 +1,4 @@
-import FranchiseLicenseCenter from '@/components/FranchiseLicenseCenter'
+import MatrixFranchiseCenter from '@/components/MatrixFranchiseCenter'
 import MatrixSupportCenter from '@/components/MatrixSupportCenter'
 
 export default function Page(){
@@ -11,6 +11,6 @@ export default function Page(){
    </div>
   </div>
   <MatrixSupportCenter/>
-  <FranchiseLicenseCenter/>
+  <MatrixFranchiseCenter/>
  </>
 }
