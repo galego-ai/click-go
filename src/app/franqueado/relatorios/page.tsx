@@ -1,0 +1,16 @@
+'use client'
+
+import {useEffect,useState} from 'react'
+import {supabase} from '@/lib/supabase'
+
+type Fare={final_fare:number|string|null}
+type Summary={completed:number;cancelled:number;drivers:number;online:number;revenue:number}
+const brl=(v:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0)
+
+export default function FranchiseReportsPage(){
+ const[summary,setSummary]=useState<Summary>({completed:0,cancelled:0,drivers:0,online:0,revenue:0}),[msg,setMsg]=useState('Carregando relatório...')
+ useEffect(()=>{void load()},[])
+ async function load(){setMsg('Carregando relatório...');const{data:{user}}=await supabase.auth.getUser();if(!user){setMsg('Sessão não encontrada.');return}const{data:p,error:pe}=await supabase.from('profiles').select('franchise_id').eq('id',user.id).single();if(pe||!p?.franchise_id){setMsg(pe?.message||'Franquia não vinculada.');return}const start=new Date();start.setDate(1);start.setHours(0,0,0,0);const[completed,cancelled,drivers,online,fares]=await Promise.all([supabase.from('rides').select('id',{count:'exact',head:true}).eq('franchise_id',p.franchise_id).eq('status','completed').gte('created_at',start.toISOString()),supabase.from('rides').select('id',{count:'exact',head:true}).eq('franchise_id',p.franchise_id).eq('status','cancelled').gte('created_at',start.toISOString()),supabase.from('drivers').select('id',{count:'exact',head:true}).eq('franchise_id',p.franchise_id),supabase.from('drivers').select('id',{count:'exact',head:true}).eq('franchise_id',p.franchise_id).eq('online',true),supabase.from('rides').select('final_fare').eq('franchise_id',p.franchise_id).eq('status','completed').gte('created_at',start.toISOString())]);const error=completed.error||cancelled.error||drivers.error||online.error||fares.error;if(error){setMsg(error.message);return}const revenue=((fares.data||[]) as Fare[]).reduce((s,r)=>s+Number(r.final_fare||0),0);setSummary({completed:completed.count||0,cancelled:cancelled.count||0,drivers:drivers.count||0,online:online.count||0,revenue});setMsg('')}
+ const cards=[['Corridas concluídas',summary.completed.toLocaleString('pt-BR'),'mês atual'],['Cancelamentos',summary.cancelled.toLocaleString('pt-BR'),'mês atual'],['Motoristas cadastrados',summary.drivers.toLocaleString('pt-BR'),`${summary.online} online agora`],['Faturamento em corridas',brl(summary.revenue),'mês atual']] as const
+ return <div className="regional-home"><div className="regional-heading"><div><div className="eyebrow">Minha operação</div><h1>Relatórios</h1><p>Indicadores calculados somente com os dados da sua franquia.</p></div><button className="button secondary" onClick={()=>void load()}>Atualizar</button></div>{msg&&<div className="regional-alert">{msg}</div>}<div className="regional-kpis">{cards.map(([label,value,hint])=><div className="regional-kpi" key={label}><span>{label}</span><strong>{value}</strong><small>{hint}</small></div>)}</div><section className="card" style={{marginTop:18}}><h2>Fechamento operacional</h2><p className="subtitle">Esta área será a base para exportação por período, categoria, motorista e forma de pagamento. Os números exibidos já respeitam o vínculo da franquia.</p></section></div>
+}
