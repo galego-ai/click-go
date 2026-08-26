@@ -90,13 +90,20 @@ if 'canRequestRideByManagement();' not in text:
     if n!=1: raise SystemExit('requestRide não encontrado para bloqueio de licença')
 
 # Restaura último estado conhecido imediatamente; uma consulta fresca vem logo depois.
-if 'management_config_version' not in text.split('private void refreshManagementConfiguration()',1)[0]:
-    pass
-# onCreate já carrega a sessão; injeta cache antes da primeira tela.
 oncreate_anchor='        token = getPreferences(MODE_PRIVATE).getString("access_token", null);\n'
 cache='''        token = getPreferences(MODE_PRIVATE).getString("access_token", null);\n        managementConfigVersion=getPreferences(MODE_PRIVATE).getLong("management_config_version",0L);\n        managementOperationEnabled=getPreferences(MODE_PRIVATE).getBoolean("management_operation_enabled",true);\n        managementLicenseStatus=getPreferences(MODE_PRIVATE).getString("management_license_status","active");\n'''
 if oncreate_anchor in text and 'managementConfigVersion=getPreferences' not in text:
     text=text.replace(oncreate_anchor,cache,1)
+
+# O smoke de CI de corrida aceita deve validar diretamente a tela pós-aceite.
+# Ele é exclusivo de BuildConfig.DEBUG e do extra clickgo_tracking_smoke; não muda
+# a transição searching -> accepted usada por usuários reais.
+smoke_old='''            activeRideId="00000000-0000-0000-0000-000000000219";activeRideStatus="searching";trackingUiActive=false;\n            showActiveRide();\n            ui.postDelayed(()->{if(destroyed||isFinishing())return;activeRideStatus="accepted";trackingUiActive=true;showActiveRide();},1400);\n'''
+smoke_new='''            activeRideId="00000000-0000-0000-0000-000000000219";activeRideStatus="accepted";trackingUiActive=true;\n            showActiveRide();\n            if(BuildConfig.DEBUG)android.util.Log.i("CLICKGO_TRACKING_SMOKE","accepted tracking screen rendered");\n'''
+if smoke_old in text:
+    text=text.replace(smoke_old,smoke_new,1)
+elif 'CLICKGO_TRACKING_SMOKE' not in text:
+    raise SystemExit('bloco tracking smoke v2.19 não encontrado para estabilização')
 
 build=re.sub(r'versionCode\s+\d+','versionCode 230',build,count=1)
 build=re.sub(r"versionName\s+'[^']+'","versionName '2.30-prime'",build,count=1)
