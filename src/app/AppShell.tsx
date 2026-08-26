@@ -8,9 +8,9 @@ import AuthAssist from '@/components/AuthAssist'
 const primary=[
  ['📊 Dashboard Geral','/dashboard'],
  ['🌍 Franquias e Licenças','/franquias'],
- ['⚙️ Configurações Globais','/configuracoes-pagamentos'],
+ ['⚙️ Configurações Globais','/configuracoes'],
  ['📋 Planos e Preços','/planos'],
- ['📈 Relatórios Consolidados','/relatorios-motoristas'],
+ ['📈 Relatórios Consolidados','/relatorios'],
  ['🛡️ Auditoria','/auditoria'],
  ['👥 Usuários Matriz','/acessos'],
  ['🔧 Suporte Técnico','/suporte'],
@@ -33,25 +33,8 @@ const advanced=[
 ] as const
 
 export default function AppShell({children}:{children:React.ReactNode}){
- const pathname=usePathname()
- const assist=<AuthAssist/>
+ const pathname=usePathname(),assist=<AuthAssist/>
  if(pathname==='/'||pathname.startsWith('/franqueado')||pathname.startsWith('/passageiro')||pathname.startsWith('/motorista-app')||pathname.startsWith('/acompanhar')||pathname==='/login'||pathname==='/redefinir-senha')return <>{children}{assist}</>
- const active=(href:string)=>pathname===href||pathname.startsWith(href+'/')
- const advancedOpen=advanced.some(([,href])=>active(href))
- return <RoleGate role="super_admin" loginPath="/login">
-  <div className="shell shell-light">
-   <aside className="sidebar sidebar-compact">
-    <Link href="/dashboard" className="brand"><span className="brand-badge">CG</span><div><strong>CLICK-GO Gestão</strong><small>Matriz</small></div></Link>
-    <nav className="nav nav-compact">
-     <div className="nav-primary">{primary.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div>
-     <details className="nav-details matrix-advanced" open={advancedOpen}>
-      <summary>Ferramentas avançadas</summary>
-      <div className="nav-details-items">{advanced.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div>
-     </details>
-    </nav>
-   </aside>
-   <main className="main">{children}</main>
-   {assist}
-  </div>
- </RoleGate>
+ const active=(href:string)=>pathname===href||pathname.startsWith(href+'/'),advancedOpen=advanced.some(([,href])=>active(href))
+ return <RoleGate role="super_admin" loginPath="/login"><div className="shell shell-light"><aside className="sidebar sidebar-compact"><Link href="/dashboard" className="brand"><span className="brand-badge">CG</span><div><strong>CLICK-GO Gestão</strong><small>Matriz</small></div></Link><nav className="nav nav-compact"><div className="nav-primary">{primary.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div><details className="nav-details matrix-advanced" open={advancedOpen}><summary>Ferramentas avançadas</summary><div className="nav-details-items">{advanced.map(([label,href])=><Link className={active(href)?'active':''} key={href} href={href}>{label}</Link>)}</div></details></nav></aside><main className="main">{children}</main>{assist}</div></RoleGate>
 }
