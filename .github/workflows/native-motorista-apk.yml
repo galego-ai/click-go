@@ -81,7 +81,7 @@ jobs:
           python3 apply_driver_passenger_cancel_popup_v33.py
           python3 apply_driver_management_sync_v34.py
           python3 apply_driver_account_privacy_v35.py
-          python3 apply_driver_dynamic_categories_v36.py
+          python3 apply_driver_dynamic_categories_v36_final.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -95,6 +95,7 @@ jobs:
           grep -q "Se este e-mail estiver cadastrado" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Categoria do veículo" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "requested_category_id" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "requested_franchise_id" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "list_driver_signup_categories" app/src/main/java/com/clickgo/motorista/DriverRepository.java
           if grep -q "Tipo do veículo: Carro ou Moto" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda limitado a Carro/Moto"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "driverAccountExists ainda presente na MainActivity"; exit 1; fi
