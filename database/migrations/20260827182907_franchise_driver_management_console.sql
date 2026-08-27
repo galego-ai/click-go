@@ -1,0 +1,4 @@
+-- Introdução do console de gestão de motoristas do franqueado.
+-- A definição final das RPCs desta etapa foi ajustada imediatamente pela
+-- migração 20260827183004_fix_franchise_driver_management_city_scope.sql,
+-- que contém o estado efetivo aplicado em produção.
