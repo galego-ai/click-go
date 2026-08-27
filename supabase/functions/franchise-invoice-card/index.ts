@@ -1,7 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "jsr:@supabase/supabase-js@2.112.4";
 
-const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json"}});
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
+const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,"Content-Type":"application/json"}});
 const b64=(v:string)=>btoa(unescape(encodeURIComponent(v)));
 const money=(v:unknown)=>Number(v||0);
 const monthStart=(v:string)=>/^\d{4}-\d{2}(-01)?$/.test(v)?`${v.slice(0,7)}-01`:null;
@@ -10,6 +11,7 @@ const addDays=(iso:string,days:number)=>{const d=new Date(`${iso}T12:00:00Z`);d.
 type CardRow={id:string;invoice_id:string;franchise_id:string;charge_id:number;payment_url:string;amount:number;status:string;provider_status:string|null;paid_at:string|null;created_at:string};
 
 Deno.serve(async req=>{
+ if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  try{
   if(req.method!=="POST")return json({error:"Método não permitido"},405);
   const url=Deno.env.get("SUPABASE_URL")||"",service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
