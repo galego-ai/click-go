@@ -13,7 +13,7 @@
     "leaflet": "latest",
     "lucide-react": "latest",
     "next": "latest",
-    "payment-token-efi": "latest",
+    "payment-token-efi": "3.4.1",
     "react": "latest",
     "react-dom": "latest"
   },
