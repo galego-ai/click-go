@@ -128,7 +128,7 @@ export default function TaximetroTarifasPage(){
 
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap',marginTop:14}}>
      <div style={{fontSize:12,color:'#a1a1aa'}}>Prévia: base {money(d.base_fare)} · {money(d.price_per_km)}/km · {money(d.price_per_minute)}/min · mínima {money(d.minimum_fare)} · x{Number(d.multiplier||1).toFixed(2)}</div>
-     <button style={{...btn,opacity:c.locked_by_matrix?.55:1}} disabled={busy||c.locked_by_matrix} onClick={()=>void save(c)}>Salvar tarifa do taxímetro</button>
+     <button style={{...btn,opacity:c.locked_by_matrix?0.55:1}} disabled={busy||c.locked_by_matrix} onClick={()=>void save(c)}>Salvar tarifa do taxímetro</button>
     </div>
    </section>})}
    {!busy&&filtered.length===0&&<div style={{background:'#fff',border:'1px solid #e2e2e2',padding:20,borderRadius:14,color:'#666'}}>Nenhuma categoria encontrada. Crie primeiro uma categoria em <strong>Tarifas Locais</strong>.</div>}
