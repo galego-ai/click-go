@@ -33,6 +33,7 @@ export default function CategoriasPage(){
     supabase.from('franchise_cities').select('city_id,cities(id,name,state)').eq('franchise_id',p.franchise_id),
     supabase.from('ride_categories').select('*').eq('franchise_id',p.franchise_id).order('name')
    ])
+   if(fc.error)throw fc.error;if(c.error)throw c.error
    const cr=(fc.data||[]).map((x:any)=>x.cities).filter(Boolean);setCities(cr)
    const categories=(c.data||[]) as Category[];setItems(categories)
    const drafts:Record<string,RuleDraft>={};for(const x of categories)drafts[x.id]={tolerance:String(x.wait_tolerance_minutes??5),fee:String(x.waiting_fee_per_minute??0.5),deviation:String(x.route_deviation_threshold_m??800)};setRuleDraft(drafts)
@@ -55,19 +56,34 @@ export default function CategoriasPage(){
   setBusy(true)
   try{
    let markerUrl:string|null=null;if(marker)markerUrl=await upload(marker)
-   const{error}=await supabase.from('ride_categories').insert({franchise_id:fid,city_id:f.city_id,name:f.name.trim(),base_fare:Number(f.base_fare),price_per_km:Number(f.price_per_km),price_per_minute:Number(f.price_per_minute),minimum_fare:Number(f.minimum_fare),cancellation_fee:Number(f.cancellation_fee),dynamic_multiplier:Number(f.dynamic_multiplier),wait_tolerance_minutes:Number(f.wait_tolerance_minutes),waiting_fee_per_minute:Number(f.waiting_fee_per_minute),route_deviation_threshold_m:deviation,active:true,source:'franchise',locked_by_matrix:false,required_vehicle_type:f.required_vehicle_type||null,icon_url:markerUrl,map_marker_url:markerUrl})
+   const{error}=await supabase.rpc('franchise_upsert_ride_category',{
+    p_category_id:null,
+    p_city_id:f.city_id,
+    p_payload:{name:f.name.trim(),base_fare:Number(f.base_fare),price_per_km:Number(f.price_per_km),price_per_minute:Number(f.price_per_minute),minimum_fare:Number(f.minimum_fare),cancellation_fee:Number(f.cancellation_fee),dynamic_multiplier:Number(f.dynamic_multiplier),wait_tolerance_minutes:Number(f.wait_tolerance_minutes),waiting_fee_per_minute:Number(f.waiting_fee_per_minute),route_deviation_threshold_m:deviation,active:true,required_vehicle_type:f.required_vehicle_type||null,icon_url:markerUrl,map_marker_url:markerUrl}
+   })
    if(error)throw error
    setF(v=>({...emptyForm,city_id:v.city_id}));setMarker(null);setMsg('Categoria criada com regras de espera e segurança configuradas.');await load()
   }catch(e:any){setMsg(e.message||'Erro ao criar categoria.')}finally{setBusy(false)}
  }
- async function toggle(c:Category){if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela matriz.');const{error}=await supabase.from('ride_categories').update({active:!c.active}).eq('id',c.id);setMsg(error?error.message:'Categoria atualizada.');if(!error)await load()}
- async function replaceMarker(c:Category,file:File|null){if(!file)return;setBusy(true);try{const url=await upload(file,c.id);const{error}=await supabase.from('ride_categories').update({icon_url:url,map_marker_url:url}).eq('id',c.id);if(error)throw error;setMsg('Ícone do mapa atualizado.');await load()}catch(e:any){setMsg(e.message||'Erro ao atualizar ícone.')}finally{setBusy(false)}}
+ async function toggle(c:Category){
+  if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela Matriz.')
+  const{error}=await supabase.rpc('franchise_upsert_ride_category',{p_category_id:c.id,p_city_id:c.city_id,p_payload:{active:!c.active}})
+  setMsg(error?error.message:'Categoria atualizada.');if(!error)await load()
+ }
+ async function replaceMarker(c:Category,file:File|null){
+  if(!file)return;if(c.locked_by_matrix){setMsg('Categoria bloqueada pela Matriz.');return}
+  setBusy(true);try{
+   const url=await upload(file,c.id)
+   const{error}=await supabase.rpc('franchise_upsert_ride_category',{p_category_id:c.id,p_city_id:c.city_id,p_payload:{icon_url:url,map_marker_url:url}})
+   if(error)throw error;setMsg('Ícone do mapa atualizado.');await load()
+  }catch(e:any){setMsg(e.message||'Erro ao atualizar ícone.')}finally{setBusy(false)}
+ }
  async function saveRules(c:Category){
-  if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela matriz.')
+  if(c.locked_by_matrix)return setMsg('Categoria bloqueada pela Matriz.')
   const d=ruleDraft[c.id],deviation=Number(d?.deviation)
   if(!d||!Number.isInteger(Number(d.tolerance))||Number(d.tolerance)<0||Number(d.tolerance)>120||!validMoney(d.fee)||!Number.isInteger(deviation)||deviation<100||deviation>5000){setMsg('Tolerância: 0–120 min; taxa: valor positivo; desvio: 100–5.000 metros.');return}
   setBusy(true)
-  const{error}=await supabase.from('ride_categories').update({wait_tolerance_minutes:Number(d.tolerance),waiting_fee_per_minute:Number(d.fee),route_deviation_threshold_m:deviation}).eq('id',c.id)
+  const{error}=await supabase.rpc('franchise_upsert_ride_category',{p_category_id:c.id,p_city_id:c.city_id,p_payload:{wait_tolerance_minutes:Number(d.tolerance),waiting_fee_per_minute:Number(d.fee),route_deviation_threshold_m:deviation}})
   setBusy(false);setMsg(error?error.message:'Regras de espera e segurança atualizadas.');if(!error)await load()
  }
  return <main style={{minHeight:'100vh',background:'#080808',color:'#fff',padding:24}}><div style={{maxWidth:1200,margin:'0 auto'}}>
@@ -93,9 +109,9 @@ export default function CategoriasPage(){
     const d=ruleDraft[c.id]||{tolerance:String(c.wait_tolerance_minutes??5),fee:String(c.waiting_fee_per_minute??0.5),deviation:String(c.route_deviation_threshold_m??800)}
     return <div key={c.id} style={{...box,padding:13}}><div style={{display:'grid',gridTemplateColumns:'58px 1fr auto',gap:12,alignItems:'center'}}>
      <div>{c.map_marker_url||c.icon_url?<img src={c.map_marker_url||c.icon_url||''} alt="Marcador" style={{width:52,height:52,borderRadius:'50%',objectFit:'cover',border:'2px solid #ffd400'}}/>:<div style={{width:52,height:52,borderRadius:'50%',background:'#222',display:'grid',placeItems:'center',fontSize:26}}>🚗</div>}</div>
-     <div><b>{c.name}</b><div style={{color:'#9ca3af',fontSize:13}}>Base R$ {Number(c.base_fare).toFixed(2)} · km R$ {Number(c.price_per_km).toFixed(2)} · min R$ {Number(c.price_per_minute).toFixed(2)} · mínima R$ {Number(c.minimum_fare).toFixed(2)}</div><label style={{display:'inline-block',marginTop:8,fontSize:12,color:'#ffd400',cursor:'pointer'}}>Trocar ícone do mapa <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" hidden onChange={e=>replaceMarker(c,e.target.files?.[0]||null)}/></label></div>
-     <button disabled={c.locked_by_matrix} style={{...btn,background:c.active?'#333':'#ffd400',color:c.active?'#fff':'#000'}} onClick={()=>toggle(c)}>{c.locked_by_matrix?'Bloqueada pela matriz':c.active?'Desativar':'Ativar'}</button>
-    </div><div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #292929',display:'grid',gridTemplateColumns:'1fr 1fr 1fr auto',gap:9,alignItems:'end'}}><label style={{fontSize:12,color:'#9ca3af'}}>Tolerância no embarque (min)<input type="number" min="0" max="120" step="1" style={{...input,marginTop:5}} value={d.tolerance} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,tolerance:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Cobrança após tolerância (R$/min)<input type="number" min="0" step="0.01" style={{...input,marginTop:5}} value={d.fee} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,fee:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Alerta de desvio (m)<input type="number" min="100" max="5000" step="50" style={{...input,marginTop:5}} value={d.deviation} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,deviation:e.target.value}}))}/></label><button disabled={busy||c.locked_by_matrix} style={btn} onClick={()=>saveRules(c)}>Salvar regras</button></div></div>
+     <div><b>{c.name}</b><div style={{color:'#9ca3af',fontSize:13}}>Base R$ {Number(c.base_fare).toFixed(2)} · km R$ {Number(c.price_per_km).toFixed(2)} · min R$ {Number(c.price_per_minute).toFixed(2)} · mínima R$ {Number(c.minimum_fare).toFixed(2)}</div><label style={{display:'inline-block',marginTop:8,fontSize:12,color:c.locked_by_matrix?'#777':'#ffd400',cursor:c.locked_by_matrix?'not-allowed':'pointer'}}>Trocar ícone do mapa <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" hidden disabled={c.locked_by_matrix} onChange={e=>replaceMarker(c,e.target.files?.[0]||null)}/></label></div>
+     <button disabled={c.locked_by_matrix} style={{...btn,background:c.active?'#333':'#ffd400',color:c.active?'#fff':'#000'}} onClick={()=>toggle(c)}>{c.locked_by_matrix?'Bloqueada pela Matriz':c.active?'Desativar':'Ativar'}</button>
+    </div><div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #292929',display:'grid',gridTemplateColumns:'1fr 1fr 1fr auto',gap:9,alignItems:'end'}}><label style={{fontSize:12,color:'#9ca3af'}}>Tolerância no embarque (min)<input type="number" min="0" max="120" step="1" disabled={c.locked_by_matrix} style={{...input,marginTop:5}} value={d.tolerance} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,tolerance:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Cobrança após tolerância (R$/min)<input type="number" min="0" step="0.01" disabled={c.locked_by_matrix} style={{...input,marginTop:5}} value={d.fee} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,fee:e.target.value}}))}/></label><label style={{fontSize:12,color:'#9ca3af'}}>Alerta de desvio (m)<input type="number" min="100" max="5000" step="50" disabled={c.locked_by_matrix} style={{...input,marginTop:5}} value={d.deviation} onChange={e=>setRuleDraft(v=>({...v,[c.id]:{...d,deviation:e.target.value}}))}/></label><button disabled={busy||c.locked_by_matrix} style={btn} onClick={()=>saveRules(c)}>Salvar regras</button></div></div>
    })}{!items.length&&<div>Nenhuma categoria cadastrada.</div>}</div></section>
   </div>
  </div></main>
