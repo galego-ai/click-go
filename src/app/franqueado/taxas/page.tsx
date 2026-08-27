@@ -184,16 +184,15 @@ export default function FranchiseFeesPage() {
     if (franchiseForm.mode === 'percentage' && (percentage < 0 || percentage > 100)) { setMsg('O percentual deve ficar entre 0% e 100%.'); return }
 
     setBusy(true)
-    const { error } = await supabase.from('franchise_operational_wallet_settings').upsert({
-      franchise_id: fid,
-      ride_fee_mode: franchiseForm.mode,
-      ride_fee: num(franchiseForm.fixed),
-      ride_fee_percentage: percentage,
-      minimum_balance_to_receive: num(franchiseForm.minimum),
-      low_balance_threshold: num(franchiseForm.low),
-      locked_by_matrix: false,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'franchise_id' })
+    const { error } = await supabase.rpc('franchise_update_operational_wallet_settings', {
+      p_wallet: {
+        ride_fee_mode: franchiseForm.mode,
+        ride_fee: num(franchiseForm.fixed),
+        ride_fee_percentage: percentage,
+        minimum_balance_to_receive: num(franchiseForm.minimum),
+        low_balance_threshold: num(franchiseForm.low),
+      },
+    })
     setBusy(false)
     if (error) { setMsg(error.message); return }
     setMsg(franchiseForm.mode === 'percentage' ? `Regra da franquia salva: ${percentage.toLocaleString('pt-BR')}% do valor da corrida.` : `Regra da franquia salva: ${money(num(franchiseForm.fixed))} por corrida.`)
