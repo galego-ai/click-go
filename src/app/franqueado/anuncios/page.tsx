@@ -14,7 +14,6 @@ const audienceLabel=(v:string)=>v==='passenger'?'Passageiro':v==='driver'?'Motor
 
 export default function FranchiseAdsPage(){
   const [franchiseId,setFranchiseId]=useState<string|null>(null)
-  const [franchiseName,setFranchiseName]=useState('')
   const [cities,setCities]=useState<City[]>([])
   const [banners,setBanners]=useState<Banner[]>([])
   const [busy,setBusy]=useState(false)
@@ -32,14 +31,13 @@ export default function FranchiseAdsPage(){
       if(pe)throw pe
       if(!p?.franchise_id||p.role!=='franchise_admin')throw new Error('Acesso exclusivo do franqueado.')
       setFranchiseId(p.franchise_id)
-      const [fc,fr,b]=await Promise.all([
+      const [fc,b]=await Promise.all([
         supabase.from('franchise_cities').select('city_id,cities(id,name,state)').eq('franchise_id',p.franchise_id),
-        supabase.from('franchises').select('trade_name').eq('id',p.franchise_id).single(),
         supabase.from('advertising_banners').select('id,title,image_url,target_url,audience,active,city_id,starts_at,ends_at').eq('franchise_id',p.franchise_id).order('created_at',{ascending:false}),
       ])
-      if(fc.error)throw fc.error;if(fr.error)throw fr.error;if(b.error)throw b.error
+      if(fc.error)throw fc.error;if(b.error)throw b.error
       const cityRows=(fc.data||[]).map((x:any)=>x.cities).filter(Boolean) as City[]
-      setCities(cityRows);setFranchiseName(fr.data?.trade_name||'')
+      setCities(cityRows)
       setBanners((b.data||[]) as Banner[])
     }catch(e:any){setMsg(e.message||'Erro ao carregar anúncios.')}
     finally{setBusy(false)}
@@ -48,19 +46,20 @@ export default function FranchiseAdsPage(){
   async function createAd(e:FormEvent<HTMLFormElement>){
     e.preventDefault();if(!franchiseId)return
     setBusy(true);setMsg('')
-    const {error}=await supabase.from('advertising_banners').insert({
-      title:form.title.trim(),
-      image_url:form.image_url.trim(),
-      target_url:form.target_url.trim()||null,
-      advertiser_name:franchiseName||null,
-      city_id:form.city_id||null,
-      franchise_id:franchiseId,
-      placement:'home',
-      audience:form.audience,
-      sort_order:100,
-      active:true,
-      starts_at:form.starts_at||null,
-      ends_at:form.ends_at||null,
+    const {error}=await supabase.rpc('management_save_advertising_banner',{
+      p_banner_id:null,
+      p_payload:{
+        title:form.title.trim(),
+        image_url:form.image_url.trim(),
+        target_url:form.target_url.trim()||null,
+        city_id:form.city_id||null,
+        placement:'home',
+        audience:form.audience,
+        sort_order:100,
+        active:true,
+        starts_at:form.starts_at||null,
+        ends_at:form.ends_at||null,
+      },
     })
     if(error)setMsg(error.message)
     else{
@@ -72,7 +71,7 @@ export default function FranchiseAdsPage(){
   }
 
   async function toggle(b:Banner){
-    const {error}=await supabase.from('advertising_banners').update({active:!b.active}).eq('id',b.id)
+    const {error}=await supabase.rpc('management_save_advertising_banner',{p_banner_id:b.id,p_payload:{active:!b.active}})
     setMsg(error?error.message:'Anúncio atualizado.')
     if(!error)await load()
   }

@@ -1,0 +1,14 @@
+revoke execute on function public.audit_dynamic_pricing_write() from public, anon, authenticated;
+revoke execute on function public.audit_matrix_driver_direct_update() from public, anon, authenticated;
+revoke execute on function public.audit_platform_payment_settings_update() from public, anon, authenticated;
+revoke execute on function public.audit_remote_app_settings_update() from public, anon, authenticated;
+revoke execute on function public.audit_support_ticket_change() from public, anon, authenticated;
+revoke execute on function public.guard_dynamic_pricing_write() from public, anon, authenticated;
+revoke execute on function public.log_franchise_city_payment_settings() from public, anon, authenticated;
+revoke execute on function public.log_franchise_operational_wallet_settings() from public, anon, authenticated;
+revoke execute on function public.log_platform_operational_wallet_settings_update() from public, anon, authenticated;
+revoke execute on function public.log_platform_payment_settings_update() from public, anon, authenticated;
+revoke execute on function public.normalize_matrix_driver_direct_update() from public, anon, authenticated;
+revoke execute on function public.stamp_franchise_city_payment_settings() from public, anon, authenticated;
+revoke execute on function public.stamp_franchise_operational_wallet_settings() from public, anon, authenticated;
+revoke execute on function public.stamp_platform_operational_wallet_settings_update() from public, anon, authenticated;
