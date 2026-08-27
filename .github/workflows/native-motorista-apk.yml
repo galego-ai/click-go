@@ -81,6 +81,7 @@ jobs:
           python3 apply_driver_passenger_cancel_popup_v33.py
           python3 apply_driver_management_sync_v34.py
           python3 apply_driver_account_privacy_v35.py
+          python3 apply_driver_dynamic_categories_v36_final.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -92,6 +93,11 @@ jobs:
           grep -q "canReceiveNewRidesByManagement" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "E-mail ou senha incorretos." app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Se este e-mail estiver cadastrado" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "Categoria do veículo" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "requested_category_id" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "requested_franchise_id" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "list_driver_signup_categories" app/src/main/java/com/clickgo/motorista/DriverRepository.java
+          if grep -q "Tipo do veículo: Carro ou Moto" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda limitado a Carro/Moto"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "driverAccountExists ainda presente na MainActivity"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/DriverRepository.java; then echo "driverAccountExists ainda presente no DriverRepository"; exit 1; fi
       - name: Build native driver APK
@@ -100,9 +106,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.5-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.6-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v3.5-prime
-          path: apk-output/CLICK-GO-Motorista-native-v3.5-prime.apk
+          name: CLICK-GO-Motorista-native-v3.6-prime
+          path: apk-output/CLICK-GO-Motorista-native-v3.6-prime.apk
           if-no-files-found: error
