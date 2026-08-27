@@ -1,0 +1,21 @@
+revoke insert, update, delete, truncate, trigger, references on table public.city_pricing_rules from anon, authenticated;
+revoke all on table public.city_pricing_rules from anon;
+grant select on table public.city_pricing_rules to authenticated;
+drop policy if exists super_admin_pricing_all on public.city_pricing_rules;
+drop policy if exists franchise_admin_city_pricing_all on public.city_pricing_rules;
+drop policy if exists city_pricing_matrix_select on public.city_pricing_rules;
+create policy city_pricing_matrix_select on public.city_pricing_rules for select to authenticated using (public.current_active_management_role()='super_admin');
+drop policy if exists city_pricing_franchise_select on public.city_pricing_rules;
+create policy city_pricing_franchise_select on public.city_pricing_rules for select to authenticated using (public.current_active_management_role()='franchise_admin' and exists(select 1 from public.franchise_cities fc where fc.franchise_id=public.current_profile_franchise_id() and fc.city_id=city_pricing_rules.city_id));
+drop policy if exists city_pricing_operator_select on public.city_pricing_rules;
+create policy city_pricing_operator_select on public.city_pricing_rules for select to authenticated using (public.current_active_management_role()='operator' and (public.staff_has_permission('pricing') or public.staff_has_permission('operation')) and public.can_access_city(city_id));
+drop policy if exists city_pricing_active_read on public.city_pricing_rules;
+create policy city_pricing_active_read on public.city_pricing_rules for select to authenticated using (active=true);
+
+revoke insert, update, delete, truncate, trigger, references on table public.region_pricing_rules from anon, authenticated;
+revoke all on table public.region_pricing_rules from anon;
+grant select on table public.region_pricing_rules to authenticated;
+drop policy if exists region_pricing_super_admin_all on public.region_pricing_rules;
+drop policy if exists region_pricing_franchise_admin_all on public.region_pricing_rules;
+drop policy if exists region_pricing_authenticated_read on public.region_pricing_rules;
+create policy region_pricing_authenticated_read on public.region_pricing_rules for select to authenticated using (active=true or public.current_active_management_role()='super_admin' or (public.current_active_management_role()='franchise_admin' and franchise_id=public.current_profile_franchise_id() and public.can_access_city(city_id)) or (public.current_active_management_role()='operator' and franchise_id=public.staff_franchise_id() and (public.staff_has_permission('pricing') or public.staff_has_permission('operation')) and public.can_access_city(city_id)));
