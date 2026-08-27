@@ -84,6 +84,7 @@ jobs:
           python3 apply_driver_dynamic_categories_v36_final.py
           python3 apply_driver_panel_categories_v37.py
           python3 apply_driver_home_taximeter_v38.py
+          python3 apply_driver_home_taximeter_v38_fix.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -104,6 +105,7 @@ jobs:
           grep -q "loadHomeTaximeter(homeTaximeter)" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "ABRIR / FINALIZAR TAXÍMETRO" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "tarifas definidas pelo franqueado" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q 'startTaximeterUiPolling(taximeterSessionId,amount,meta,running.optDouble("multiplier",1))' app/src/main/java/com/clickgo/motorista/MainActivity.java
           if grep -q "Tipo do veículo: Carro ou Moto" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda limitado a Carro/Moto"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "driverAccountExists ainda presente na MainActivity"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/DriverRepository.java; then echo "driverAccountExists ainda presente no DriverRepository"; exit 1; fi
