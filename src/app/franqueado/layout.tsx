@@ -14,6 +14,7 @@ const core:NavItem[]=[
  {href:'/franqueado/operacao',label:'🛣️ Corridas',permission:'operation'},
  {href:'/franqueado/mapa',label:'🗺️ Motoristas Online / Mapa',permission:'operation'},
  {href:'/franqueado/categorias',label:'💰 Tarifas Locais',permission:'pricing'},
+ {href:'/franqueado/taximetro',label:'🚕 Tarifas do Taxímetro',permission:'pricing'},
  {href:'/franqueado/anuncios',label:'🎯 Promoções e Cupons',permission:'marketing'},
  {href:'/franqueado/pagamentos',label:'💳 Financeiro',permission:'finance'},
  {href:'/franqueado/fatura',label:'🧾 Fatura CLICK-GO',permission:'finance'},
