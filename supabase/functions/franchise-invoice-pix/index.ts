@@ -1,7 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.112.4";
 
-const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json"}});
+const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
+const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,"Content-Type":"application/json"}});
 const b64=(v:string)=>btoa(unescape(encodeURIComponent(v)));
 const required=["EFI_CLIENT_ID","EFI_CLIENT_SECRET","EFI_CERT_PEM","EFI_KEY_PEM","EFI_PIX_KEY"];
 const providerError=(body:any)=>({nome:body?.nome??body?.name??null,mensagem:body?.mensagem??body?.message??body?.erro??body?.error??null});
@@ -11,6 +12,7 @@ const monthStart=(v:string)=>/^\d{4}-\d{2}(-01)?$/.test(v)?`${v.slice(0,7)}-01`:
 type ChargeRow={id:string;invoice_id:string;franchise_id:string;txid:string;location_id:number|null;location:string|null;qrcode:string|null;qrcode_image:string|null;visualization_link:string|null;amount:number;status:string;provider_status:string|null;end_to_end_id:string|null;expires_at:string|null;paid_at:string|null;created_at:string};
 
 Deno.serve(async(req)=>{
+ if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  try{
   if(req.method!=="POST")return json({error:"Método não permitido"},405);
   const url=Deno.env.get("SUPABASE_URL")||"";
