@@ -78,8 +78,7 @@ if 'private void confirmCancelRideAndReturnHome()' not in text:
     if anchor not in text: raise SystemExit('showPayments anchor não encontrado')
     text=text.replace(anchor,helpers+anchor,1)
 
-# Troca o antigo desenho/listagem de coordenadas do histórico por um mapa real interativo.
-pat=r'''    private void showPassengerRoutePoints\(JSONObject ride\) \{.*?\n    \}\n\n(?=    private void showPayments\(\))'''
+# Troca qualquer versão anterior do detalhamento do trajeto por um mapa real interativo.
 replacement=r'''    private void showPassengerRoutePoints(JSONObject ride) {
         String rideId=ride.optString("id","");
         if(rideId.isBlank()){toast("Corrida inválida.");return;}
@@ -97,14 +96,22 @@ replacement=r'''    private void showPassengerRoutePoints(JSONObject ride) {
             });
         }catch(Exception e){ui.post(()->toast(message(e)));}});
     }
-
 '''
-text,n=re.subn(pat,replacement,text,count=1,flags=re.S)
-if n!=1 and 'clickgo_history_real_map' not in text:
-    raise SystemExit('showPassengerRoutePoints não encontrado para converter em mapa')
+if 'clickgo_history_real_map' not in text:
+    pat=r'(?s)    private void showPassengerRoutePoints\(JSONObject ride\)\s*\{.*?\n    \}\n(?=\n    private )'
+    text,n=re.subn(pat,replacement,text,count=1)
+    if n!=1:
+        # Fallback estrutural: localiza o início e o próximo método privado no mesmo nível.
+        start=text.find('    private void showPassengerRoutePoints(JSONObject ride)')
+        if start<0: raise SystemExit('showPassengerRoutePoints não encontrado para converter em mapa')
+        nxt=re.search(r'\n    private [^\n]+\(',text[start+10:])
+        if not nxt: raise SystemExit('fim de showPassengerRoutePoints não encontrado')
+        end=start+10+nxt.start()+1
+        text=text[:start]+replacement+'\n'+text[end:]
 
-# Ajusta o rótulo do botão de histórico para deixar claro que abre o mapa.
+# Ajusta quaisquer rótulos anteriores para deixar claro que o histórico abre o mapa.
 text=text.replace('📍 Ver todos os pontos GPS','🗺️ Ver mapa da corrida')
+text=text.replace('Ver todos os pontos GPS','Ver mapa da corrida')
 
 for required in ['confirmCancelRideAndReturnHome','cancel_passenger_ride','clearRideAndReturnHome','clickgo_history_real_map','Ver mapa da corrida']:
     if required not in text: raise SystemExit('Passageiro v2.36 incompleto: '+required)
