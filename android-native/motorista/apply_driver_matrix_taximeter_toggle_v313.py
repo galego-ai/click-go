@@ -27,19 +27,12 @@ if 'boolean taximeterAllowed=access.optBoolean("enabled",true);' not in text:
     if old not in text: raise SystemExit('carregamento do taxímetro da home não encontrado')
     text=text.replace(old,new,1)
 
-# O item do menu desaparece quando a regra da Matriz estiver desligada.
+# Versões antigas tinham item dedicado no menu; o menu enxuto atual não tem esse item.
+# Se existir, ele também obedece à preferência atualizada pela Matriz.
 menu_line='''        body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));\n'''
 menu_guard='''        if(getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));}\n'''
-if menu_guard not in text:
-    if menu_line in text:
-        text=text.replace(menu_line,menu_guard,1)
-    else:
-        menu_pat=r'(?m)^\s*body\.addView\(menuCard\("🚕",\s*"Taxímetro / Maçaneta"[^\n]*\n'
-        m=re.search(menu_pat,text)
-        if not m: raise SystemExit('item Taxímetro / Maçaneta não encontrado')
-        line=m.group(0)
-        indent=re.match(r'\s*',line).group(0)
-        text=text[:m.start()]+indent+'if(getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){'+line.strip()+'}\n'+text[m.end():]
+if menu_line in text and menu_guard not in text:
+    text=text.replace(menu_line,menu_guard,1)
 
 # Proteção local imediata na abertura da tela completa. O backend continua sendo a autoridade final.
 guard='''        if(!getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){\n            toast("Taxímetro não disponível nesta franquia.");\n            showHome();\n            return;\n        }\n'''
