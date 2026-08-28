@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import runpy
 
 main_path=Path('app/src/main/java/com/clickgo/passageiro/MainActivity.java')
 build_path=Path('app/build.gradle')
@@ -110,3 +111,5 @@ build=re.sub(r"versionName\s+'[^']+'","versionName '2.30-prime'",build,count=1)
 main_path.write_text(text,encoding='utf-8')
 build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.30 PRIME: sincronização CLICK-GO Gestão aplicada.')
+
+runpy.run_path('apply_passenger_call_timer_v231.py',run_name='__main__')
