@@ -10,9 +10,17 @@ if 'clickgo_search_timer_smoke' not in t:
         raise SystemExit('token anchor nao encontrado para smoke do cronometro')
     t=t.replace(anchor,block,1)
 
-for required in ['clickgo_search_timer_smoke','clickgo_search_timer_popup','Procurando motorista','Cancelar chamada']:
+# O smoke antigo de corrida aceita agora passa primeiro pelo estado de busca.
+accepted='''            activeRideId="00000000-0000-0000-0000-000000000219";activeRideStatus="accepted";trackingUiActive=true;\n            showActiveRide();\n            if(BuildConfig.DEBUG)android.util.Log.i("CLICKGO_TRACKING_SMOKE","accepted tracking screen rendered");\n'''
+transition='''            activeRideId="00000000-0000-0000-0000-000000000219";activeRideStatus="searching";trackingUiActive=false;\n            callStartedAtMs=System.currentTimeMillis();driverFoundElapsedMs=0L;\n            showActiveRide();\n            if(BuildConfig.DEBUG)android.util.Log.i("CLICKGO_TRACKING_SMOKE","search popup rendered");\n            ui.postDelayed(()->{if(destroyed||isFinishing())return;activeRideStatus="accepted";trackingUiActive=true;showActiveRide();if(BuildConfig.DEBUG)android.util.Log.i("CLICKGO_TRACKING_SMOKE","accepted tracking screen rendered after search");},1800L);\n'''
+if accepted in t:
+    t=t.replace(accepted,transition,1)
+elif 'accepted tracking screen rendered after search' not in t:
+    raise SystemExit('bloco de smoke accepted v2.30 nao encontrado')
+
+for required in ['clickgo_search_timer_smoke','clickgo_search_timer_popup','Procurando motorista','Cancelar chamada','search popup rendered','accepted tracking screen rendered after search']:
     if required not in t:
         raise SystemExit('smoke v2.32 incompleto: '+required)
 
 p.write_text(t,encoding='utf-8')
-print('Passageiro v2.32: smoke isolado do popup circular de busca aplicado.')
+print('Passageiro v2.32: smoke de busca circular e transicao para aceite aplicado.')
