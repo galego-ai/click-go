@@ -82,3 +82,4 @@ print('Passageiro v2.31 PRIME: tempo de chamada do motorista visível durante a 
 
 runpy.run_path('apply_passenger_v232_search_tracking_efi_card.py',run_name='__main__')
 runpy.run_path('apply_passenger_v232_search_smoke.py',run_name='__main__')
+runpy.run_path('apply_passenger_v233_no_pix.py',run_name='__main__')
