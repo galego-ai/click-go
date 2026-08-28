@@ -12,3 +12,4 @@ path.write_text(text,encoding='utf-8')
 print('Motorista v3.8: polling do taxímetro na home corrigido com multiplicador da sessão.')
 
 runpy.run_path('apply_driver_vehicle_photos_v39.py',run_name='__main__')
+runpy.run_path('apply_driver_city_only_signup_v310.py',run_name='__main__')
