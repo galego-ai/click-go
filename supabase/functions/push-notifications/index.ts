@@ -55,7 +55,7 @@ Deno.serve(async(req:Request)=>{
     }
   };
 
-  let rideAppKind:string|null=null;
+  let deliveryAppKind:string|null=null;
   if(n.ride_id){
     const{data:ride,error:re}=await supabase
       .from('rides')
@@ -71,7 +71,14 @@ Deno.serve(async(req:Request)=>{
       return json({status:'suppressed',reason:'ride_not_active_or_recipient_not_participant'});
     }
 
-    rideAppKind=n.user_id===ride.driver_id?'driver':'passenger';
+    deliveryAppKind=n.user_id===ride.driver_id?'driver':'passenger';
+  }else if(String(n.type||'')==='management_broadcast'){
+    const candidate=String(n.data?.target_app||'').toLowerCase();
+    if(!['driver','passenger'].includes(candidate)){
+      await markSuppressed('management_broadcast_without_valid_target_app');
+      return json({status:'suppressed',reason:'management_broadcast_without_valid_target_app'});
+    }
+    deliveryAppKind=candidate;
   }
 
   let tokenQuery=supabase
@@ -79,7 +86,7 @@ Deno.serve(async(req:Request)=>{
     .select('id,token,app_kind,platform')
     .eq('user_id',n.user_id)
     .eq('active',true);
-  if(rideAppKind)tokenQuery=tokenQuery.eq('app_kind',rideAppKind);
+  if(deliveryAppKind)tokenQuery=tokenQuery.eq('app_kind',deliveryAppKind);
 
   const{data:tokens,error:te}=await tokenQuery;
   if(te)return json({error:te.message},500);
@@ -118,6 +125,8 @@ Deno.serve(async(req:Request)=>{
       }
 
       const android:any={priority:'high',notification:{channel_id:'clickgo_updates',sound:'default'}};
+      // Comunicação de corrida é efêmera. Campanhas administrativas não usam TTL 0
+      // e podem chegar normalmente ao usuário quando o aparelho voltar à rede.
       if(n.ride_id)android.ttl='0s';
 
       const message={token:t.token,notification:{title:n.title,body:n.body},data,android};
@@ -148,7 +157,7 @@ Deno.serve(async(req:Request)=>{
       updated_at:new Date().toISOString()
     }).eq('notification_id',notificationId);
 
-    return json({status:failed===0?'sent':sent>0?'partial':'failed',sent,failed,ride_scoped:!!n.ride_id,app_kind:rideAppKind});
+    return json({status:failed===0?'sent':sent>0?'partial':'failed',sent,failed,ride_scoped:!!n.ride_id,app_kind:deliveryAppKind});
   }catch(e){
     const m=e instanceof Error?e.message:String(e);
     await supabase.from('push_delivery_queue').update({status:'failed',attempts:1,last_error:m.slice(0,1500),updated_at:new Date().toISOString()}).eq('notification_id',notificationId);
