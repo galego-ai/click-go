@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect,useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import {useEffect,useState} from 'react'
+import type {CSSProperties} from 'react'
+import {supabase} from '@/lib/supabase'
+import ManagementNotificationComposer from '@/components/ManagementNotificationComposer'
 
 type Status={
   fcm_configured:boolean
@@ -12,10 +14,10 @@ type Status={
   checked_at:string
 }
 
-const box:React.CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:16}
-const btn:React.CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'10px 14px',fontWeight:900,cursor:'pointer'}
+const box:CSSProperties={background:'#141414',border:'1px solid #292929',borderRadius:16,padding:16,color:'#fff'}
+const btn:CSSProperties={background:'#ffd400',color:'#000',border:0,borderRadius:10,padding:'10px 14px',fontWeight:900,cursor:'pointer'}
 
-export default function PushDiagnosticsPage(){
+export default function PushNotificationsPage(){
   const[data,setData]=useState<Status|null>(null)
   const[busy,setBusy]=useState(false)
   const[msg,setMsg]=useState('')
@@ -34,7 +36,11 @@ export default function PushDiagnosticsPage(){
   const sent=queue.sent||0,partial=queue.partial||0,failed=queue.failed||0,pending=(queue.queued||0)+(queue.pending_fcm_configuration||0),noDevices=queue.no_devices||0
 
   return <div>
-    <div className="topbar"><div><div className="eyebrow">Aplicativos</div><h1 className="title">Central de Push Android</h1><p className="subtitle">Diagnóstico do Firebase Cloud Messaging para Passageiro e Motorista, sem exposição de credenciais privadas.</p></div><button onClick={load} disabled={busy} style={btn}>{busy?'Verificando…':'Atualizar diagnóstico'}</button></div>
+    <div className="topbar"><div><div className="eyebrow">Operação da rede</div><h1 className="title">Notificações</h1><p className="subtitle">Envie avisos administrativos aos aplicativos Motorista e Passageiro, para todos ou para pessoas específicas.</p></div></div>
+
+    <ManagementNotificationComposer context="matrix"/>
+
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,margin:'22px 0 10px'}}><div><h2 style={{margin:0,fontSize:20}}>Diagnóstico técnico do Push</h2><p style={{margin:'4px 0 0',fontSize:12,color:'#777'}}>Status do Firebase Cloud Messaging e da fila de entrega.</p></div><button onClick={load} disabled={busy} style={btn}>{busy?'Verificando…':'Atualizar diagnóstico'}</button></div>
 
     <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:12,marginBottom:14}}>
       <div style={{...box,borderColor:data?.fcm_configured?'#166534':'#854d0e'}}><small style={{color:'#9ca3af'}}>FIREBASE / FCM</small><div style={{fontSize:22,fontWeight:950,color:data?.fcm_configured?'#4ade80':'#fbbf24',marginTop:4}}>{data?.fcm_configured?'CONFIGURADO':'PENDENTE'}</div><div style={{fontSize:11,color:'#9ca3af',marginTop:4}}>{data?.fcm_project_id||'Nenhum service account configurado'}</div></div>
