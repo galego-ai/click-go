@@ -8,7 +8,7 @@ text=main.read_text(encoding='utf-8')
 repo=repo_path.read_text(encoding='utf-8')
 build=build_path.read_text(encoding='utf-8')
 
-# Endpoint seguro que diz se a Matriz liberou o taxímetro para a franquia deste motorista.
+# Endpoint seguro que informa se a Matriz liberou o taxímetro para a franquia do motorista.
 anchor='''    public static JSONArray taximeterCategories(String token) throws Exception {\n        return new JSONArray(ApiClient.rpc("get_my_taximeter_categories", new JSONObject(), token));\n    }\n'''
 addition='''    public static JSONObject taximeterAccess(String token) throws Exception {\n        return new JSONObject(ApiClient.rpc("get_my_taximeter_access", new JSONObject(), token));\n    }\n\n'''+anchor
 if 'public static JSONObject taximeterAccess(' not in repo:
@@ -16,25 +16,38 @@ if 'public static JSONObject taximeterAccess(' not in repo:
     repo=repo.replace(anchor,addition,1)
 
 # Na home o bloco nasce oculto e só aparece após confirmação do backend.
-text=text.replace('''        LinearLayout homeTaximeter=card(Color.rgb(250,250,250),Color.rgb(225,225,225));\n        homeTaximeter.setPadding(dp(12),dp(10),dp(12),dp(10));\n''','''        LinearLayout homeTaximeter=card(Color.rgb(250,250,250),Color.rgb(225,225,225));\n        homeTaximeter.setPadding(dp(12),dp(10),dp(12),dp(10));\n        homeTaximeter.setVisibility(android.view.View.GONE);\n''',1)
+home_head='''        LinearLayout homeTaximeter=card(Color.rgb(250,250,250),Color.rgb(225,225,225));\n        homeTaximeter.setPadding(dp(12),dp(10),dp(12),dp(10));\n'''
+if 'homeTaximeter.setVisibility(android.view.View.GONE);' not in text:
+    if home_head not in text: raise SystemExit('bloco homeTaximeter não encontrado')
+    text=text.replace(home_head,home_head+'        homeTaximeter.setVisibility(android.view.View.GONE);\n',1)
 
 old='''            JSONObject running=DriverRepository.runningTaximeter(token,userId);\n            JSONArray categories=DriverRepository.taximeterCategories(token);\n            ui.post(()->renderHomeTaximeter(box,running,categories));\n'''
 new='''            JSONObject access=DriverRepository.taximeterAccess(token);\n            boolean taximeterAllowed=access.optBoolean("enabled",true);\n            getPreferences(MODE_PRIVATE).edit().putBoolean("taximeter_enabled_by_matrix",taximeterAllowed).apply();\n            if(!taximeterAllowed){ui.post(()->box.setVisibility(android.view.View.GONE));return;}\n            JSONObject running=DriverRepository.runningTaximeter(token,userId);\n            JSONArray categories=DriverRepository.taximeterCategories(token);\n            ui.post(()->{box.setVisibility(android.view.View.VISIBLE);renderHomeTaximeter(box,running,categories);});\n'''
-if old in text:text=text.replace(old,new,1)
-elif 'taximeter_enabled_by_matrix' not in text:raise SystemExit('carregamento do taxímetro da home não encontrado')
+if 'boolean taximeterAllowed=access.optBoolean("enabled",true);' not in text:
+    if old not in text: raise SystemExit('carregamento do taxímetro da home não encontrado')
+    text=text.replace(old,new,1)
 
-# O item do menu também desaparece quando a regra da Matriz estiver desligada.
-menu='''        body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));\n'''
-menu_new='''        if(getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));}\n'''
-if menu in text:text=text.replace(menu,menu_new,1)
-elif 'taximeter_enabled_by_matrix' not in text:raise SystemExit('item Taxímetro / Maçaneta não encontrado')
+# O item do menu desaparece quando a regra da Matriz estiver desligada.
+menu_line='''        body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));\n'''
+menu_guard='''        if(getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){body.addView(menuCard("🚕", "Taxímetro / Maçaneta", "Corrida livre com bandeirada, km e minuto", () -> showTaximeter())); body.addView(space(9));}\n'''
+if menu_guard not in text:
+    if menu_line in text:
+        text=text.replace(menu_line,menu_guard,1)
+    else:
+        menu_pat=r'(?m)^\s*body\.addView\(menuCard\("🚕",\s*"Taxímetro / Maçaneta"[^\n]*\n'
+        m=re.search(menu_pat,text)
+        if not m: raise SystemExit('item Taxímetro / Maçaneta não encontrado')
+        line=m.group(0)
+        indent=re.match(r'\s*',line).group(0)
+        text=text[:m.start()]+indent+'if(getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){'+line.strip()+'}\n'+text[m.end():]
 
-# Mesmo que o menu esteja em cache, a tela completa consulta o backend antes de exibir conteúdo.
-show_anchor='''    private void showTaximeter(){\n        stopPolling(); stopTaximeterUiPolling(); releaseMap();\n'''
-show_new='''    private void showTaximeter(){\n        stopPolling(); stopTaximeterUiPolling(); releaseMap();\n        io.execute(()->{try{JSONObject access=DriverRepository.taximeterAccess(token);if(!access.optBoolean("enabled",true)){getPreferences(MODE_PRIVATE).edit().putBoolean("taximeter_enabled_by_matrix",false).apply();ui.post(()->{toast("Taxímetro não disponível nesta franquia.");showHome();});}}catch(Exception ignored){}});\n'''
-if show_anchor in text:text=text.replace(show_anchor,show_new,1)
+# Proteção local imediata na abertura da tela completa. O backend continua sendo a autoridade final.
+guard='''        if(!getPreferences(MODE_PRIVATE).getBoolean("taximeter_enabled_by_matrix",true)){\n            toast("Taxímetro não disponível nesta franquia.");\n            showHome();\n            return;\n        }\n'''
+if 'Taxímetro não disponível nesta franquia.' not in text:
+    text,n=re.subn(r'(    private void showTaximeter\(\)\s*\{\s*\n)',r'\1'+guard,text,count=1)
+    if n!=1: raise SystemExit('showTaximeter não encontrado')
 
-for required in ['get_my_taximeter_access','taximeter_enabled_by_matrix','Taxímetro não disponível nesta franquia']:
+for required in ['get_my_taximeter_access','taximeter_enabled_by_matrix','Taxímetro não disponível nesta franquia.','boolean taximeterAllowed']:
     if required not in text+repo: raise SystemExit('Motorista v3.13 incompleto: '+required)
 
 m=re.search(r'versionCode\s+(\d+)',build)
