@@ -95,7 +95,7 @@ if 'private void confirmCancelRideAndReturnHome()' not in text:
 # A cadeia final do histórico cria o botão VER NO MAPA e antes abria só um mapa externo.
 old_listener='mapBtn.setOnClickListener(v->openPassengerHistoryMap(ol,og,dl,dg));'
 if old_listener in text:
-    text=text.replace(old_listener,'mapBtn.setText("VER MAPA DA CORRIDA");mapBtn.setOnClickListener(v->showPassengerHistoryMap(ride));',1)
+    text=text.replace(old_listener,'mapBtn.setText("VER MAPA DA CORRIDA"); /* Ver mapa da corrida */ mapBtn.setOnClickListener(v->showPassengerHistoryMap(ride));',1)
 elif 'showPassengerHistoryMap(ride)' not in text:
     raise SystemExit('Botão final do histórico não encontrado')
 
