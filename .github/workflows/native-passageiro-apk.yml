@@ -101,6 +101,7 @@ jobs:
           python3 apply_passenger_management_sync_v230.py
           python3 apply_passenger_active_ride_resume_v233.py
           python3 apply_passenger_search_timeout_v234.py
+          python3 apply_passenger_card_delete_label_v235.py
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
@@ -122,6 +123,8 @@ jobs:
           grep -q "timeout_passenger_ride_search" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "Infelizmente não encontramos um motorista" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_retry_same_ride" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "Excluir cartão" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "delete_method" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
@@ -216,9 +219,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.34-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.35-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.34-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.34-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.35-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.35-prime.apk
           if-no-files-found: error
