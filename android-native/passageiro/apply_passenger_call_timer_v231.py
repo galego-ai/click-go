@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import runpy
 
 main_path=Path('app/src/main/java/com/clickgo/passageiro/MainActivity.java')
 build_path=Path('app/build.gradle')
@@ -78,3 +79,6 @@ build=re.sub(r"versionName\s+'[^']+'","versionName '2.31-prime'",build,count=1)
 main_path.write_text(text,encoding='utf-8')
 build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.31 PRIME: tempo de chamada do motorista visível durante a busca.')
+
+runpy.run_path('apply_passenger_v232_search_tracking_efi_card.py',run_name='__main__')
+runpy.run_path('apply_passenger_v232_search_smoke.py',run_name='__main__')
