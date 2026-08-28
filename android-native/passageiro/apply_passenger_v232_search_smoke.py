@@ -1,4 +1,5 @@
 from pathlib import Path
+import runpy
 
 p=Path('app/src/main/java/com/clickgo/passageiro/MainActivity.java')
 t=p.read_text(encoding='utf-8')
@@ -24,3 +25,5 @@ for required in ['clickgo_search_timer_smoke','clickgo_search_timer_popup','Proc
 
 p.write_text(t,encoding='utf-8')
 print('Passageiro v2.32: smoke de busca circular e transicao para aceite aplicado.')
+
+runpy.run_path('apply_passenger_favorites_map_autocomplete_v233.py',run_name='__main__')
