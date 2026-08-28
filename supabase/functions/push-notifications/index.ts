@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js@2.4.6/edge-runtime.d.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json"}});
@@ -118,8 +118,6 @@ Deno.serve(async(req:Request)=>{
       }
 
       const android:any={priority:'high',notification:{channel_id:'clickgo_updates',sound:'default'}};
-      // Corrida é informação efêmera: se o aparelho não estiver conectado agora,
-      // o FCM descarta em vez de guardar para entregar depois.
       if(n.ride_id)android.ttl='0s';
 
       const message={token:t.token,notification:{title:n.title,body:n.body},data,android};
