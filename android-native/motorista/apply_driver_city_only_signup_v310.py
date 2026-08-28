@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import runpy
 
 main = Path('app/src/main/java/com/clickgo/motorista/MainActivity.java')
 repo_path = Path('app/src/main/java/com/clickgo/motorista/DriverRepository.java')
@@ -69,3 +70,5 @@ main.write_text(text, encoding='utf-8')
 repo_path.write_text(repo, encoding='utf-8')
 build_path.write_text(build, encoding='utf-8')
 print('Motorista v3.10 PRIME: cadastro exige escolha explicita somente da cidade.')
+
+runpy.run_path('apply_driver_taximeter_nav_v311.py',run_name='__main__')
