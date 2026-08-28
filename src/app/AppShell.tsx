@@ -16,10 +16,12 @@ const primary=[
 ] as const
 
 const operation=[
+ ['📲 Solicitar Corrida','/chamadas'],
  ['🚘 Motoristas','/motoristas'],
  ['👤 Passageiros','/passageiros'],
  ['🛣️ Corridas','/corridas'],
  ['💰 Tarifas','/tarifas'],
+ ['🚕 Taxímetro por Franquia','/taximetro-franquias'],
  ['🎯 Promoções e Cupons','/promocoes'],
  ['💬 Chamados / Suporte','/suporte'],
  ['🔔 Notificações','/notificacoes-push'],
