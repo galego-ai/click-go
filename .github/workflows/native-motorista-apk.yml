@@ -85,7 +85,7 @@ jobs:
           python3 apply_driver_panel_categories_v37.py
           python3 apply_driver_home_taximeter_v38.py
           python3 apply_driver_home_taximeter_v38_fix.py
-          python3 apply_driver_heatmap_dynamic_v311.py
+          python3 apply_driver_heatmap_dynamic_v312.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -110,8 +110,9 @@ jobs:
           grep -q "Selecione sua cidade" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "available_driver_registration_cities" app/src/main/java/com/clickgo/motorista/DriverRepository.java
           grep -q "get_driver_market_map" app/src/main/java/com/clickgo/motorista/DriverRepository.java
-          grep -q "Mapa de calor" app/src/main/java/com/clickgo/motorista/MainActivity.java
-          grep -q "renderMarketLayers" app/src/main/java/com/clickgo/motorista/DriverMapRenderer.java
+          grep -q "refreshDriverMarketMap" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "MarketOverlay" app/src/main/java/com/clickgo/motorista/DriverMapRenderer.java
+          grep -q "pickup_radius_km" app/src/main/java/com/clickgo/motorista/DriverMapRenderer.java
           if grep -q 'requested_franchise_id",requestedFranchiseId' app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda envia franquia escolhida pelo app"; exit 1; fi
           if grep -q "Tipo do veículo: Carro ou Moto" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda limitado a Carro/Moto"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "driverAccountExists ainda presente na MainActivity"; exit 1; fi
@@ -122,9 +123,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.11-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.12-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v3.11-prime
-          path: apk-output/CLICK-GO-Motorista-native-v3.11-prime.apk
+          name: CLICK-GO-Motorista-native-v3.12-prime
+          path: apk-output/CLICK-GO-Motorista-native-v3.12-prime.apk
           if-no-files-found: error
