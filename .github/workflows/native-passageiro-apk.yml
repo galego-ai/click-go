@@ -99,6 +99,7 @@ jobs:
           python3 apply_passenger_webview_crash_shield_v223.py
           python3 apply_passenger_driver_distance_v226.py
           python3 apply_passenger_management_sync_v230.py
+          python3 apply_passenger_active_ride_resume_v233.py
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
@@ -116,6 +117,7 @@ jobs:
           grep -q "get_app_configuration_state" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "CLICKGO_MANAGEMENT" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "canRequestRideByManagement" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "status=not.in.(completed,cancelled)" app/src/main/java/com/clickgo/passageiro/MainActivity.java
       - name: Build native passenger APK
         working-directory: android-native/passageiro
         run: gradle --no-daemon :app:assembleDebug
