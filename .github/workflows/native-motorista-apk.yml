@@ -87,6 +87,7 @@ jobs:
           python3 apply_driver_home_taximeter_v38_fix.py
           python3 apply_driver_heatmap_dynamic_v312.py
           python3 apply_driver_matrix_taximeter_toggle_v313.py
+          python3 apply_driver_payment_confirmation_v314.py
           grep -q "RECARREGAR VIA PIX" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Carteira de créditos" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Ganho real" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -105,7 +106,8 @@ jobs:
           grep -q "driver_my_categories" app/src/main/java/com/clickgo/motorista/DriverRepository.java
           grep -q "loadHomeTaximeter(homeTaximeter)" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "ABRIR / FINALIZAR TAXÍMETRO" app/src/main/java/com/clickgo/motorista/MainActivity.java
-          grep -q "tarifas definidas pelo franqueado" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "ABRIR TAXÍMETRO / FAZER VIAGEM" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "autorização da Matriz ativa" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q 'startTaximeterUiPolling(taximeterSessionId,amount,meta,running.optDouble("multiplier",1))' app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Cidade de cadastro" app/src/main/java/com/clickgo/motorista/MainActivity.java
           grep -q "Selecione sua cidade" app/src/main/java/com/clickgo/motorista/MainActivity.java
@@ -116,6 +118,11 @@ jobs:
           grep -q "pickup_radius_km" app/src/main/java/com/clickgo/motorista/DriverMapRenderer.java
           grep -q "get_my_taximeter_access" app/src/main/java/com/clickgo/motorista/DriverRepository.java
           grep -q "taximeter_enabled_by_matrix" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "confirm_driver_ride_payment" app/src/main/java/com/clickgo/motorista/DriverRepository.java
+          grep -q "CONFIRME O RECEBIMENTO" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "CONFIRMAR RECEBIMENTO" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "resumePendingPaymentConfirmation" app/src/main/java/com/clickgo/motorista/MainActivity.java
+          grep -q "showRidePaymentConfirmation" app/src/main/java/com/clickgo/motorista/MainActivity.java
           if grep -q 'requested_franchise_id",requestedFranchiseId' app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda envia franquia escolhida pelo app"; exit 1; fi
           if grep -q "Tipo do veículo: Carro ou Moto" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "Cadastro ainda limitado a Carro/Moto"; exit 1; fi
           if grep -q "driverAccountExists" app/src/main/java/com/clickgo/motorista/MainActivity.java; then echo "driverAccountExists ainda presente na MainActivity"; exit 1; fi
@@ -126,9 +133,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.13-prime.apk
+          cp android-native/motorista/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Motorista-native-v3.14-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Motorista-native-v3.13-prime
-          path: apk-output/CLICK-GO-Motorista-native-v3.13-prime.apk
+          name: CLICK-GO-Motorista-native-v3.14-prime
+          path: apk-output/CLICK-GO-Motorista-native-v3.14-prime.apk
           if-no-files-found: error
