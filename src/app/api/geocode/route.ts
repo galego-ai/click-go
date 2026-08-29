@@ -3,7 +3,7 @@ import { getMapboxAccessToken } from '@/lib/map-provider-config'
 
 export const dynamic = 'force-dynamic'
 
-type Provider = 'google' | 'mapbox' | 'nominatim'
+type Provider = 'google' | 'mapbox' | 'nominatim' | 'overpass'
 
 type AddressParts = {
   street?: string
@@ -248,8 +248,8 @@ function rankLocalPlaces(rows: SearchResult[], q: string, limit = 8) {
         const hay = normalize(`${row.name || ''} ${row.label}`)
         const matched = queryTokens.filter(token => hay.includes(token)).length
         const km = row.distanceKm ?? 9999
-        // Distance stays decisive for category searches, but a named establishment
-        // still receives enough relevance to move ahead of a nearby generic result.
+        // Distance stays decisive for category searches, while a specifically
+        // named establishment can still outrank a slightly closer generic one.
         const score = km * 4 - matched * 12 - (row.source === 'google' ? 1 : 0)
         return { ...row, score }
       })
@@ -349,6 +349,129 @@ async function googleNearbyPlaces(types: string[], lat: number, lng: number): Pr
   })
 }
 
+function overpassSelectors(types: string[]) {
+  const selectors = new Set<string>()
+  const has = (...values: string[]) => values.some(value => types.includes(value))
+
+  if (has('hospital', 'general_hospital', 'medical_center')) selectors.add('["amenity"~"^(hospital|clinic)$"]')
+  if (has('medical_clinic', 'doctor')) selectors.add('["amenity"~"^(clinic|doctors)$"]')
+  if (has('supermarket', 'discount_supermarket', 'hypermarket')) selectors.add('["shop"~"^(supermarket|convenience)$"]')
+  if (has('grocery_store', 'market', 'food_store', 'convenience_store')) {
+    selectors.add('["shop"~"^(supermarket|convenience|general)$"]')
+    selectors.add('["amenity"="marketplace"]')
+  }
+  if (has('school', 'primary_school', 'secondary_school')) selectors.add('["amenity"="school"]')
+  if (has('preschool', 'child_care_agency')) selectors.add('["amenity"="kindergarten"]')
+  if (has('university', 'educational_institution')) selectors.add('["amenity"~"^(university|college)$"]')
+  if (has('pharmacy', 'drugstore')) {
+    selectors.add('["amenity"="pharmacy"]')
+    selectors.add('["shop"="chemist"]')
+  }
+  if (has('gas_station')) selectors.add('["amenity"="fuel"]')
+  if (has('restaurant')) selectors.add('["amenity"~"^(restaurant|fast_food|cafe)$"]')
+  if (has('bakery')) selectors.add('["shop"="bakery"]')
+  if (has('bar')) selectors.add('["amenity"~"^(bar|pub)$"]')
+  if (has('hotel', 'lodging', 'motel')) selectors.add('["tourism"~"^(hotel|motel|hostel|guest_house)$"]')
+  if (has('gym', 'fitness_center')) selectors.add('["leisure"~"^(fitness_centre|sports_centre)$"]')
+  if (has('medical_lab')) selectors.add('["healthcare"="laboratory"]')
+  if (has('dentist', 'dental_clinic')) selectors.add('["amenity"="dentist"]')
+  if (has('veterinary_care')) selectors.add('["amenity"="veterinary"]')
+  if (has('pet_store')) selectors.add('["shop"="pet"]')
+  if (has('atm')) selectors.add('["amenity"="atm"]')
+  if (has('bank')) selectors.add('["amenity"="bank"]')
+  if (has('post_office')) selectors.add('["amenity"="post_office"]')
+  if (has('shopping_mall')) selectors.add('["shop"="mall"]')
+  if (has('butcher_shop')) selectors.add('["shop"="butcher"]')
+  if (has('farmers_market')) selectors.add('["amenity"="marketplace"]')
+  if (has('car_repair')) selectors.add('["shop"="car_repair"]')
+  if (has('tire_shop')) selectors.add('["shop"~"^(tyres|car_repair)$"]')
+  if (has('police')) selectors.add('["amenity"="police"]')
+  if (has('fire_station')) selectors.add('["amenity"="fire_station"]')
+  if (has('city_hall', 'local_government_office')) selectors.add('["amenity"="townhall"]')
+  if (has('bus_station', 'transit_station')) {
+    selectors.add('["amenity"="bus_station"]')
+    selectors.add('["public_transport"="station"]')
+  }
+  if (has('airport', 'international_airport')) selectors.add('["aeroway"="aerodrome"]')
+  if (has('church')) selectors.add('["amenity"="place_of_worship"]')
+  if (has('park', 'city_park')) selectors.add('["leisure"="park"]')
+  if (has('plaza')) selectors.add('["place"="square"]')
+  if (has('store', 'general_store', 'department_store')) selectors.add('["shop"~"^(general|department_store)$"]')
+
+  return Array.from(selectors)
+}
+
+async function overpassLocalPlaces(types: string[], lat: number, lng: number): Promise<SearchResult[]> {
+  const selectors = overpassSelectors(types)
+  if (!selectors.length) return []
+
+  const clauses = selectors
+    .map(selector => `nwr(around:${LOCAL_PLACE_RADIUS_KM * 1000},${lat},${lng})${selector};`)
+    .join('')
+  const query = `[out:json][timeout:6];(${clauses});out center tags;`
+  const body = new URLSearchParams({ data: query }).toString()
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ]
+
+  let elements: any[] = []
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
+        },
+        body,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3200),
+      })
+      if (!res.ok) continue
+      const json = await res.json() as any
+      elements = Array.isArray(json?.elements) ? json.elements : []
+      if (elements.length) break
+    } catch {
+      // Try the next public Overpass instance.
+    }
+  }
+
+  return elements
+    .map((element: any) => {
+      const tags = element?.tags || {}
+      const rLat = Number(element?.lat ?? element?.center?.lat)
+      const rLng = Number(element?.lon ?? element?.center?.lon)
+      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return null
+
+      const parts: AddressParts = {
+        street: first(tags['addr:street'], tags['addr:place']),
+        number: first(tags['addr:housenumber']),
+        neighborhood: first(tags['addr:suburb'], tags['addr:neighbourhood'], tags['addr:district']),
+        city: first(tags['addr:city'], tags['addr:municipality']),
+        state: first(tags['addr:state']),
+        postcode: first(tags['addr:postcode']),
+      }
+      const name = first(tags.name, tags.brand, tags.operator, 'Local')
+      const address = fullAddress(parts, name)
+      const category = first(tags.amenity, tags.shop, tags.tourism, tags.leisure, tags.healthcare, tags.aeroway, 'Local')
+
+      return {
+        ...parts,
+        label: address,
+        name,
+        subtitle: address,
+        category,
+        kind: 'place' as const,
+        lat: rLat,
+        lng: rLng,
+        distanceKm: distance(lat, lng, rLat, rLng),
+        source: 'overpass' as const,
+      }
+    })
+    .filter((row: SearchResult | null): row is SearchResult => Boolean(row))
+}
+
 async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promise<SearchResult[]> {
   const bounds = localBounds(lat, lng)
   const url = new URL('https://nominatim.openstreetmap.org/search')
@@ -400,14 +523,22 @@ async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promis
 }
 
 async function localPlaceSearch(q: string, rule: PlaceRule, lat: number, lng: number) {
-  const [google, osm] = await Promise.all([
+  const [google, overpass, osmSearch] = await Promise.all([
     googleNearbyPlaces(rule.types, lat, lng).catch(() => []),
+    overpassLocalPlaces(rule.types, lat, lng).catch(() => []),
     nominatimLocalPlaces(q, lat, lng).catch(() => []),
   ])
-  const results = rankLocalPlaces([...google, ...osm], q)
+  const results = rankLocalPlaces([...google, ...overpass, ...osmSearch], q)
+
+  const activeProviders = [
+    google.length ? 'google' : '',
+    overpass.length ? 'overpass' : '',
+    osmSearch.length ? 'nominatim' : '',
+  ].filter(Boolean)
+
   return {
     results,
-    provider: google.length && osm.length ? 'mixed' : google.length ? 'google' : osm.length ? 'nominatim' : 'none',
+    provider: activeProviders.length > 1 ? 'mixed' : activeProviders[0] || 'none',
   }
 }
 
