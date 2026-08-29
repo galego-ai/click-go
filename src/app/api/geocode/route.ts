@@ -3,7 +3,7 @@ import { getMapboxAccessToken } from '@/lib/map-provider-config'
 
 export const dynamic = 'force-dynamic'
 
-type Provider = 'google' | 'mapbox' | 'nominatim'
+type Provider = 'google' | 'mapbox' | 'nominatim' | 'overpass'
 
 type AddressParts = {
   street?: string
@@ -27,16 +27,52 @@ type SearchResult = AddressParts & {
   score?: number
 }
 
+type PlaceRule = {
+  terms: string[]
+  types: string[]
+}
+
 const LOCAL_PLACE_RADIUS_KM = 18
-const PLACE_KEYWORDS = [
-  'hospital','hospitais','supermercado','supermercados','mercado','mercados','escola','escolas','colegio','colegios',
-  'faculdade','faculdades','universidade','universidades','creche','creches','farmacia','farmacias','drogaria','drogarias',
-  'posto','postos','posto de gasolina','gasolina','combustivel','restaurante','restaurantes','lanchonete','lanchonetes',
-  'padaria','padarias','pizzaria','pizzarias','bar','bares','hotel','hoteis','motel','moteis','academia','academias',
-  'clinica','clinicas','laboratorio','laboratorios','dentista','dentistas','veterinario','veterinaria','pet shop','petshop',
-  'banco','bancos','caixa eletronico','lotérica','loterica','correios','shopping','shopping center','loja','lojas',
-  'oficina','oficinas','borracharia','borracharias','delegacia','delegacias','bombeiros','prefeitura','rodoviaria','aeroporto',
-  'igreja','igrejas','templo','parque','parques','praca','pracas','acougue','acougues','feira','terminal','upa','pronto socorro',
+
+const PLACE_RULES: PlaceRule[] = [
+  { terms: ['pronto socorro', 'upa', 'hospital', 'hospitais'], types: ['hospital', 'general_hospital', 'medical_center'] },
+  { terms: ['posto de saude', 'centro de saude', 'clinica', 'clinicas'], types: ['medical_clinic', 'medical_center', 'doctor'] },
+  { terms: ['supermercado', 'supermercados'], types: ['supermarket', 'discount_supermarket', 'hypermarket'] },
+  { terms: ['mercado', 'mercados'], types: ['grocery_store', 'supermarket', 'market', 'food_store', 'convenience_store'] },
+  { terms: ['escola', 'escolas', 'colegio', 'colegios'], types: ['school', 'primary_school', 'secondary_school'] },
+  { terms: ['creche', 'creches'], types: ['preschool', 'child_care_agency'] },
+  { terms: ['faculdade', 'faculdades', 'universidade', 'universidades'], types: ['university', 'educational_institution'] },
+  { terms: ['farmacia', 'farmacias', 'drogaria', 'drogarias'], types: ['pharmacy', 'drugstore'] },
+  { terms: ['posto de gasolina', 'posto combustivel', 'posto de combustivel', 'gasolina', 'combustivel'], types: ['gas_station'] },
+  { terms: ['restaurante', 'restaurantes', 'lanchonete', 'lanchonetes', 'pizzaria', 'pizzarias'], types: ['restaurant'] },
+  { terms: ['padaria', 'padarias'], types: ['bakery'] },
+  { terms: ['bar', 'bares'], types: ['bar'] },
+  { terms: ['hotel', 'hoteis'], types: ['hotel', 'lodging'] },
+  { terms: ['motel', 'moteis'], types: ['motel', 'lodging'] },
+  { terms: ['academia', 'academias'], types: ['gym', 'fitness_center'] },
+  { terms: ['laboratorio', 'laboratorios'], types: ['medical_lab'] },
+  { terms: ['dentista', 'dentistas'], types: ['dentist', 'dental_clinic'] },
+  { terms: ['veterinario', 'veterinaria', 'veterinarios', 'veterinarias'], types: ['veterinary_care'] },
+  { terms: ['pet shop', 'petshop'], types: ['pet_store'] },
+  { terms: ['caixa eletronico', 'atm'], types: ['atm'] },
+  { terms: ['banco', 'bancos'], types: ['bank'] },
+  { terms: ['correios', 'correio'], types: ['post_office'] },
+  { terms: ['shopping center', 'shopping'], types: ['shopping_mall'] },
+  { terms: ['acougue', 'acougues'], types: ['butcher_shop'] },
+  { terms: ['feira', 'feiras'], types: ['farmers_market', 'market'] },
+  { terms: ['oficina', 'oficinas'], types: ['car_repair'] },
+  { terms: ['borracharia', 'borracharias'], types: ['tire_shop'] },
+  { terms: ['delegacia', 'delegacias'], types: ['police'] },
+  { terms: ['bombeiros', 'corpo de bombeiros'], types: ['fire_station'] },
+  { terms: ['prefeitura', 'prefeituras'], types: ['city_hall', 'local_government_office'] },
+  { terms: ['rodoviaria', 'terminal rodoviario'], types: ['bus_station', 'transit_station'] },
+  { terms: ['aeroporto', 'aeroportos'], types: ['airport', 'international_airport'] },
+  { terms: ['igreja', 'igrejas'], types: ['church'] },
+  { terms: ['parque', 'parques'], types: ['park', 'city_park'] },
+  { terms: ['praca', 'pracas'], types: ['plaza', 'park'] },
+  { terms: ['terminal', 'terminais'], types: ['transit_station', 'bus_station'] },
+  { terms: ['loja', 'lojas'], types: ['store', 'general_store', 'department_store'] },
+  { terms: ['posto', 'postos'], types: ['gas_station'] },
 ]
 
 function parseCoord(value: string | null, min: number, max: number) {
@@ -104,9 +140,12 @@ function withContext(q: string, context: string) {
   return `${q}, ${cleanContext}`
 }
 
-function isLocalPlaceQuery(q: string) {
-  const n = normalize(q)
-  return PLACE_KEYWORDS.some(keyword => n.includes(normalize(keyword)))
+function placeRuleForQuery(q: string): PlaceRule | null {
+  const normalized = ` ${normalize(q)} `
+  for (const rule of PLACE_RULES) {
+    if (rule.terms.some(term => normalized.includes(` ${normalize(term)} `))) return rule
+  }
+  return null
 }
 
 function localBounds(lat: number, lng: number, radiusKm = LOCAL_PLACE_RADIUS_KM) {
@@ -179,9 +218,9 @@ function rankLocalPlaces(rows: SearchResult[], q: string, limit = 8) {
     const hay = normalize(`${row.name || ''} ${row.label}`)
     const matched = queryTokens.filter(token => hay.includes(token)).length
     const km = row.distanceKm ?? 9999
-    const score = km * 10 - matched * 2 - (row.source === 'google' ? 0.5 : 0)
+    const score = km * 4 - matched * 12 - (row.source === 'google' ? 1 : 0)
     return { ...row, score }
-  }).sort((a, b) => (a.score ?? 0) - (b.score ?? 0)), limit)
+  }).sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)), limit)
     .map(({ score: _score, source: _source, ...row }) => row)
 }
 
@@ -215,11 +254,10 @@ function googlePlaceParts(components: any[] = []): AddressParts {
   }
 }
 
-async function googleLocalPlaces(q: string, lat: number, lng: number): Promise<SearchResult[]> {
+async function googleNearbyPlaces(types: string[], lat: number, lng: number): Promise<SearchResult[]> {
   const key = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_SERVER_API_KEY
-  if (!key) return []
-  const bounds = localBounds(lat, lng)
-  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+  if (!key || !types.length) return []
+  const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -227,15 +265,15 @@ async function googleLocalPlaces(q: string, lat: number, lng: number): Promise<S
       'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.addressComponents,places.location,places.primaryTypeDisplayName,places.types',
     },
     body: JSON.stringify({
-      textQuery: q,
-      pageSize: 12,
+      includedTypes: Array.from(new Set(types)).slice(0, 20),
+      maxResultCount: 12,
       rankPreference: 'DISTANCE',
       languageCode: 'pt-BR',
       regionCode: 'BR',
-      locationRestriction: { rectangle: bounds },
+      locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: LOCAL_PLACE_RADIUS_KM * 1000 } },
     }),
     cache: 'no-store',
-    signal: AbortSignal.timeout(2200),
+    signal: AbortSignal.timeout(2400),
   })
   if (!res.ok) return []
   const json = await res.json() as any
@@ -259,6 +297,112 @@ async function googleLocalPlaces(q: string, lat: number, lng: number): Promise<S
   })
 }
 
+function overpassSelectors(types: string[]) {
+  const selectors = new Set<string>()
+  const has = (...values: string[]) => values.some(value => types.includes(value))
+  if (has('hospital', 'general_hospital', 'medical_center')) selectors.add('["amenity"~"^(hospital|clinic)$"]')
+  if (has('medical_clinic', 'doctor')) selectors.add('["amenity"~"^(clinic|doctors)$"]')
+  if (has('supermarket', 'discount_supermarket', 'hypermarket')) selectors.add('["shop"~"^(supermarket|convenience)$"]')
+  if (has('grocery_store', 'market', 'food_store', 'convenience_store')) {
+    selectors.add('["shop"~"^(supermarket|convenience|general)$"]')
+    selectors.add('["amenity"="marketplace"]')
+  }
+  if (has('school', 'primary_school', 'secondary_school')) selectors.add('["amenity"="school"]')
+  if (has('preschool', 'child_care_agency')) selectors.add('["amenity"="kindergarten"]')
+  if (has('university', 'educational_institution')) selectors.add('["amenity"~"^(university|college)$"]')
+  if (has('pharmacy', 'drugstore')) {
+    selectors.add('["amenity"="pharmacy"]')
+    selectors.add('["shop"="chemist"]')
+  }
+  if (has('gas_station')) selectors.add('["amenity"="fuel"]')
+  if (has('restaurant')) selectors.add('["amenity"~"^(restaurant|fast_food|cafe)$"]')
+  if (has('bakery')) selectors.add('["shop"="bakery"]')
+  if (has('bar')) selectors.add('["amenity"~"^(bar|pub)$"]')
+  if (has('hotel', 'lodging', 'motel')) selectors.add('["tourism"~"^(hotel|motel|hostel|guest_house)$"]')
+  if (has('gym', 'fitness_center')) selectors.add('["leisure"~"^(fitness_centre|sports_centre)$"]')
+  if (has('medical_lab')) selectors.add('["healthcare"="laboratory"]')
+  if (has('dentist', 'dental_clinic')) selectors.add('["amenity"="dentist"]')
+  if (has('veterinary_care')) selectors.add('["amenity"="veterinary"]')
+  if (has('pet_store')) selectors.add('["shop"="pet"]')
+  if (has('atm')) selectors.add('["amenity"="atm"]')
+  if (has('bank')) selectors.add('["amenity"="bank"]')
+  if (has('post_office')) selectors.add('["amenity"="post_office"]')
+  if (has('shopping_mall')) selectors.add('["shop"="mall"]')
+  if (has('butcher_shop')) selectors.add('["shop"="butcher"]')
+  if (has('farmers_market')) selectors.add('["amenity"="marketplace"]')
+  if (has('car_repair')) selectors.add('["shop"="car_repair"]')
+  if (has('tire_shop')) selectors.add('["shop"~"^(tyres|car_repair)$"]')
+  if (has('police')) selectors.add('["amenity"="police"]')
+  if (has('fire_station')) selectors.add('["amenity"="fire_station"]')
+  if (has('city_hall', 'local_government_office')) selectors.add('["amenity"="townhall"]')
+  if (has('bus_station', 'transit_station')) {
+    selectors.add('["amenity"="bus_station"]')
+    selectors.add('["public_transport"="station"]')
+  }
+  if (has('airport', 'international_airport')) selectors.add('["aeroway"="aerodrome"]')
+  if (has('church')) selectors.add('["amenity"="place_of_worship"]')
+  if (has('park', 'city_park')) selectors.add('["leisure"="park"]')
+  if (has('plaza')) selectors.add('["place"="square"]')
+  if (has('store', 'general_store', 'department_store')) selectors.add('["shop"~"^(general|department_store)$"]')
+  return Array.from(selectors)
+}
+
+async function overpassLocalPlaces(types: string[], lat: number, lng: number): Promise<SearchResult[]> {
+  const selectors = overpassSelectors(types)
+  if (!selectors.length) return []
+  const clauses = selectors.map(selector => `nwr(around:${LOCAL_PLACE_RADIUS_KM * 1000},${lat},${lng})${selector};`).join('')
+  const query = `[out:json][timeout:6];(${clauses});out center tags;`
+  const body = new URLSearchParams({ data: query }).toString()
+  const endpoints = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']
+  let elements: any[] = []
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)' },
+        body,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(3200),
+      })
+      if (!res.ok) continue
+      const json = await res.json() as any
+      elements = Array.isArray(json?.elements) ? json.elements : []
+      if (elements.length) break
+    } catch {}
+  }
+
+  const rows: SearchResult[] = []
+  for (const element of elements) {
+    const tags = element?.tags || {}
+    const rLat = Number(element?.lat ?? element?.center?.lat)
+    const rLng = Number(element?.lon ?? element?.center?.lon)
+    if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue
+    const parts: AddressParts = {
+      street: first(tags['addr:street'], tags['addr:place']),
+      number: first(tags['addr:housenumber']),
+      neighborhood: first(tags['addr:suburb'], tags['addr:neighbourhood'], tags['addr:district']),
+      city: first(tags['addr:city'], tags['addr:municipality']),
+      state: first(tags['addr:state']),
+      postcode: first(tags['addr:postcode']),
+    }
+    const name = first(tags.name, tags.brand, tags.operator, 'Local')
+    const address = fullAddress(parts, name)
+    rows.push({
+      ...parts,
+      label: address,
+      name,
+      subtitle: address,
+      category: first(tags.amenity, tags.shop, tags.tourism, tags.leisure, tags.healthcare, tags.aeroway, 'Local'),
+      kind: 'place',
+      lat: rLat,
+      lng: rLng,
+      distanceKm: distance(lat, lng, rLat, rLng),
+      source: 'overpass',
+    })
+  }
+  return rows
+}
+
 async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promise<SearchResult[]> {
   const bounds = localBounds(lat, lng)
   const url = new URL('https://nominatim.openstreetmap.org/search')
@@ -270,10 +414,7 @@ async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promis
   url.searchParams.set('bounded', '1')
   url.searchParams.set('viewbox', `${bounds.low.longitude},${bounds.high.latitude},${bounds.high.longitude},${bounds.low.latitude}`)
   const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
-      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5',
-    },
+    headers: { 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5' },
     cache: 'no-store',
     signal: AbortSignal.timeout(1800),
   })
@@ -307,16 +448,15 @@ async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promis
   })
 }
 
-async function localPlaceSearch(q: string, lat: number, lng: number) {
-  const [google, osm] = await Promise.all([
-    googleLocalPlaces(q, lat, lng).catch(() => []),
+async function localPlaceSearch(q: string, rule: PlaceRule, lat: number, lng: number) {
+  const [google, overpass, osmSearch] = await Promise.all([
+    googleNearbyPlaces(rule.types, lat, lng).catch(() => []),
+    overpassLocalPlaces(rule.types, lat, lng).catch(() => []),
     nominatimLocalPlaces(q, lat, lng).catch(() => []),
   ])
-  const results = rankLocalPlaces([...google, ...osm], q)
-  return {
-    results,
-    provider: google.length && osm.length ? 'mixed' : google.length ? 'google' : osm.length ? 'nominatim' : 'none',
-  }
+  const results = rankLocalPlaces([...google, ...overpass, ...osmSearch], q)
+  const activeProviders = [google.length ? 'google' : '', overpass.length ? 'overpass' : '', osmSearch.length ? 'nominatim' : ''].filter(Boolean)
+  return { results, provider: activeProviders.length > 1 ? 'mixed' : activeProviders[0] || 'none' }
 }
 
 async function mapboxSearch(q: string, lat: number | null, lng: number | null): Promise<SearchResult[]> {
@@ -372,9 +512,12 @@ async function nominatimSearch(q: string, lat: number | null, lng: number | null
   return (Array.isArray(json) ? json : []).map((r: any) => {
     const a = r?.address || {}
     const parts: AddressParts = {
-      street: first(a.road, a.pedestrian, a.residential, a.footway, a.path), number: first(a.house_number),
-      neighborhood: first(a.neighbourhood, a.suburb, a.quarter, a.city_district), city: first(a.city, a.town, a.village, a.municipality, a.county),
-      state: first(a.state_code, a['ISO3166-2-lvl4']?.split('-')?.[1], a.state), postcode: first(a.postcode),
+      street: first(a.road, a.pedestrian, a.residential, a.footway, a.path),
+      number: first(a.house_number),
+      neighborhood: first(a.neighbourhood, a.suburb, a.quarter, a.city_district),
+      city: first(a.city, a.town, a.village, a.municipality, a.county),
+      state: first(a.state_code, a['ISO3166-2-lvl4']?.split('-')?.[1], a.state),
+      postcode: first(a.postcode),
     }
     const rLat = Number(r.lat)
     const rLng = Number(r.lon)
@@ -408,7 +551,9 @@ async function googleGeocode(q: string, lat: number | null, lng: number | null):
 async function rankedForwardSearch(q: string, context: string, lat: number | null, lng: number | null) {
   const contextual = withContext(q, context)
   const [google, mapbox, osm] = await Promise.all([
-    googleGeocode(contextual, lat, lng).catch(() => []), mapboxSearch(q, lat, lng).catch(() => []), nominatimSearch(contextual, lat, lng).catch(() => []),
+    googleGeocode(contextual, lat, lng).catch(() => []),
+    mapboxSearch(q, lat, lng).catch(() => []),
+    nominatimSearch(contextual, lat, lng).catch(() => []),
   ])
   const merged = rankResults([...google, ...mapbox, ...osm], q, context)
   return { results: merged, provider: google.length && (mapbox.length || osm.length) ? 'mixed' : google.length ? 'google' : mapbox.length ? 'mapbox' : osm.length ? 'nominatim' : 'none' }
@@ -419,7 +564,10 @@ async function googleReverse(lat: number, lng: number): Promise<SearchResult | n
   if (!key) return null
   try {
     const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
-    url.searchParams.set('latlng', `${lat},${lng}`); url.searchParams.set('language', 'pt-BR'); url.searchParams.set('region', 'br'); url.searchParams.set('key', key)
+    url.searchParams.set('latlng', `${lat},${lng}`)
+    url.searchParams.set('language', 'pt-BR')
+    url.searchParams.set('region', 'br')
+    url.searchParams.set('key', key)
     const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(1800) })
     if (!res.ok) return null
     const json = await res.json() as any
@@ -433,13 +581,24 @@ async function googleReverse(lat: number, lng: number): Promise<SearchResult | n
 async function nominatimReverse(lat: number, lng: number): Promise<SearchResult | null> {
   try {
     const url = new URL('https://nominatim.openstreetmap.org/reverse')
-    url.searchParams.set('format', 'jsonv2'); url.searchParams.set('lat', String(lat)); url.searchParams.set('lon', String(lng)); url.searchParams.set('zoom', '18'); url.searchParams.set('addressdetails', '1')
+    url.searchParams.set('format', 'jsonv2')
+    url.searchParams.set('lat', String(lat))
+    url.searchParams.set('lon', String(lng))
+    url.searchParams.set('zoom', '18')
+    url.searchParams.set('addressdetails', '1')
     const res = await fetch(url, { headers: { 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)', 'Accept-Language': 'pt-BR,pt;q=0.9' }, cache: 'no-store', signal: AbortSignal.timeout(1800) })
     if (!res.ok) return null
     const json = await res.json() as any
     if (!json) return null
     const a = json.address || {}
-    const parts: AddressParts = { street: first(a.road, a.pedestrian, a.residential, a.footway, a.path), number: first(a.house_number), neighborhood: first(a.neighbourhood, a.suburb, a.quarter, a.city_district), city: first(a.city, a.town, a.village, a.municipality, a.county), state: first(a.state_code, a['ISO3166-2-lvl4']?.split('-')?.[1], a.state), postcode: first(a.postcode) }
+    const parts: AddressParts = {
+      street: first(a.road, a.pedestrian, a.residential, a.footway, a.path),
+      number: first(a.house_number),
+      neighborhood: first(a.neighbourhood, a.suburb, a.quarter, a.city_district),
+      city: first(a.city, a.town, a.village, a.municipality, a.county),
+      state: first(a.state_code, a['ISO3166-2-lvl4']?.split('-')?.[1], a.state),
+      postcode: first(a.postcode),
+    }
     return { ...parts, label: fullAddress(parts, str(json.display_name)), kind: 'address', category: 'Localização atual', lat, lng }
   } catch { return null }
 }
@@ -449,14 +608,26 @@ async function mapboxReverse(lat: number, lng: number): Promise<SearchResult | n
   if (!token) return null
   try {
     const url = new URL('https://api.mapbox.com/search/geocode/v6/reverse')
-    url.searchParams.set('longitude', String(lng)); url.searchParams.set('latitude', String(lat)); url.searchParams.set('country', 'br'); url.searchParams.set('language', 'pt-BR'); url.searchParams.set('access_token', token)
+    url.searchParams.set('longitude', String(lng))
+    url.searchParams.set('latitude', String(lat))
+    url.searchParams.set('country', 'br')
+    url.searchParams.set('language', 'pt-BR')
+    url.searchParams.set('access_token', token)
     const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(1800) })
     if (!res.ok) return null
     const json = await res.json() as any
     const f = json?.features?.[0]
     if (!f) return null
-    const props = f.properties || {}; const ctx = props.context || {}
-    const parts: AddressParts = { street: first(ctx.street?.name, props.name), number: first(ctx.address?.address_number, props.address_number), neighborhood: first(ctx.neighborhood?.name, ctx.locality?.name, ctx.district?.name), city: first(ctx.place?.name, ctx.city?.name), state: first(ctx.region?.region_code, ctx.region?.name), postcode: first(ctx.postcode?.name) }
+    const props = f.properties || {}
+    const ctx = props.context || {}
+    const parts: AddressParts = {
+      street: first(ctx.street?.name, props.name),
+      number: first(ctx.address?.address_number, props.address_number),
+      neighborhood: first(ctx.neighborhood?.name, ctx.locality?.name, ctx.district?.name),
+      city: first(ctx.place?.name, ctx.city?.name),
+      state: first(ctx.region?.region_code, ctx.region?.name),
+      postcode: first(ctx.postcode?.name),
+    }
     return { ...parts, label: fullAddress(parts, first(props.full_address, props.place_formatted, props.name, 'Minha localização')), kind: 'address', category: 'Localização atual', lat, lng }
   } catch { return null }
 }
@@ -477,21 +648,21 @@ export async function GET(request: NextRequest) {
   const reverse = request.nextUrl.searchParams.get('reverse') === '1'
   const lat = parseCoord(request.nextUrl.searchParams.get('lat'), -90, 90)
   const lng = parseCoord(request.nextUrl.searchParams.get('lng'), -180, 180)
-
   if (reverse) {
     if (lat === null || lng === null) return response({ error: 'Localização inválida.' }, 400)
     const result = await reverseLookup(lat, lng)
     return response({ results: result ? [result] : [], provider: 'auto', completeAddress: true })
   }
-
   const q = (request.nextUrl.searchParams.get('q') || '').trim()
   const context = (request.nextUrl.searchParams.get('context') || '').trim().slice(0, 100)
   if (q.length < 3) return response({ error: 'Digite pelo menos 3 caracteres.' }, 400)
   if (q.length > 180) return response({ error: 'Endereço muito longo.' }, 400)
-
   try {
-    const localPlaceMode = lat !== null && lng !== null && isLocalPlaceQuery(q)
-    const found = localPlaceMode ? await localPlaceSearch(q, lat as number, lng as number) : await rankedForwardSearch(q, context, lat, lng)
+    const placeRule = placeRuleForQuery(q)
+    const localPlaceMode = lat !== null && lng !== null && Boolean(placeRule)
+    const found = localPlaceMode
+      ? await localPlaceSearch(q, placeRule as PlaceRule, lat as number, lng as number)
+      : await rankedForwardSearch(q, context, lat, lng)
     return response({
       results: found.results,
       regionalized: lat !== null && lng !== null,
@@ -503,6 +674,7 @@ export async function GET(request: NextRequest) {
       searchMode: localPlaceMode ? 'local_places' : 'address',
       localRadiusKm: localPlaceMode ? LOCAL_PLACE_RADIUS_KM : undefined,
       localRestriction: localPlaceMode,
+      placeTypes: localPlaceMode ? placeRule?.types : undefined,
       attribution: 'Google Maps / Mapbox / © OpenStreetMap contributors',
     })
   } catch {
