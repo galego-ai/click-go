@@ -7,17 +7,16 @@ text = main_path.read_text(encoding='utf-8')
 build = build_path.read_text(encoding='utf-8')
 
 # v2.37 PRIME
-# - protege a abertura inicial/home contra excecoes sincronas que fechavam a Activity;
+# - protege retornos para home contra excecoes sincronas;
 # - protege o mapa real do historico contra falha/morte do renderer WebView;
 # - usa o smoke de rede ja existente para abrir um mapa de historico real durante CI;
 # - o fallback de mapa mantem o app aberto mesmo quando WebView nao consegue renderizar.
+# O onCreate muda ao longo da cadeia de patches, portanto o hardening da linha
+# inicial e oportunista e nunca deve impedir a compilacao da versao atual.
 
-# 1) Navegacao inicial e retorno para home com fallback seguro.
 old_start = '        if (token == null || token.isBlank()) showLogin(); else showHome();\n'
 if old_start in text:
     text = text.replace(old_start, '        openInitialPassengerScreenSafely();\n', 1)
-elif 'openInitialPassengerScreenSafely();' not in text:
-    raise SystemExit('v2.37: ponto de inicializacao nao encontrado')
 
 helper_anchor = '    private void showLogin() {\n'
 helpers = r'''    private void openInitialPassengerScreenSafely() {
@@ -52,16 +51,16 @@ helpers = r'''    private void openInitialPassengerScreenSafely() {
     }
 
 '''
-if 'private void openInitialPassengerScreenSafely()' not in text:
+if 'private void safeShowHome()' not in text:
     if helper_anchor not in text:
         raise SystemExit('v2.37: ancora showLogin nao encontrada')
     text = text.replace(helper_anchor, helpers + helper_anchor, 1)
 
-# Retornos recentes para a home devem passar pela protecao.
+# Retornos recentes para a home passam pela protecao, quando o trecho existir.
 text = text.replace('        showHome();\n    }\n\n    private String jsEsc', '        safeShowHome();\n    }\n\n    private String jsEsc', 1)
 text = text.replace('ui.post(this::showHome);', 'ui.post(this::safeShowHome);')
 
-# 2) Mapa do historico: separar criacao do dialogo e tratar WebView renderer crash.
+# Mapa do historico: separar criacao do dialogo e tratar WebView renderer crash.
 old_method = r'''    private void showPassengerHistoryMap(JSONObject ride){
         String rideId=ride.optString("id","");if(rideId.isBlank()){toast("Corrida inválida.");return;}
         io.execute(()->{try{
@@ -118,7 +117,10 @@ new_method = r'''    private void showHistoryMapDialog(String html){
     private void showHistoryMapSmoke(){
         try{
             JSONObject ride=new JSONObject().put("origin_lat",-14.52472).put("origin_lng",-49.14083).put("destination_lat",-14.53110).put("destination_lng",-49.13610).put("_origin_address","Embarque de teste").put("_destination_address","Destino de teste");
-            JSONArray pts=new JSONArray();pts.put(new JSONArray().put(-14.52472).put(-49.14083));pts.put(new JSONArray().put(-14.52730).put(-49.13900));pts.put(new JSONArray().put(-14.53110).put(-49.13610));
+            JSONArray pts=new JSONArray();
+            pts.put(new JSONObject().put("lat",-14.52472).put("lng",-49.14083));
+            pts.put(new JSONObject().put("lat",-14.52730).put("lng",-49.13900));
+            pts.put(new JSONObject().put("lat",-14.53110).put("lng",-49.13610));
             showHistoryMapDialog(historyMapHtml(ride,pts));
         }catch(Throwable ignored){}
     }
@@ -128,7 +130,7 @@ if old_method in text:
 elif 'private void showHistoryMapDialog(String html)' not in text:
     raise SystemExit('v2.37: metodo do mapa do historico nao encontrado')
 
-# O smoke de rede do PR passa a exercitar o WebView real do historico sem depender de login.
+# O smoke de rede do PR exercita o WebView real do historico sem depender de login.
 network_smoke = 'if(BuildConfig.DEBUG&&getIntent()!=null&&getIntent().getBooleanExtra("clickgo_home_network_smoke",false)){token="network-smoke-invalid-token";origin=new GeoPoint(-14.52472,-49.14083);originLabel="Localização de teste com serviços ativos";showHome();return;}'
 network_smoke_v237 = 'if(BuildConfig.DEBUG&&getIntent()!=null&&getIntent().getBooleanExtra("clickgo_home_network_smoke",false)){token="network-smoke-invalid-token";origin=new GeoPoint(-14.52472,-49.14083);originLabel="Localização de teste com serviços ativos";showHome();ui.postDelayed(this::showHistoryMapSmoke,1500);return;}'
 if network_smoke in text:
@@ -136,7 +138,7 @@ if network_smoke in text:
 elif 'ui.postDelayed(this::showHistoryMapSmoke,1500)' not in text:
     raise SystemExit('v2.37: smoke de rede nao encontrado')
 
-for required in ['openInitialPassengerScreenSafely','safeShowHome','showHistoryMapDialog','onRenderProcessGone','showHistoryMapSmoke','clickgo_history_real_map']:
+for required in ['safeShowHome','showHistoryMapDialog','onRenderProcessGone','showHistoryMapSmoke','clickgo_history_real_map']:
     if required not in text:
         raise SystemExit('v2.37 incompleto: '+required)
 
