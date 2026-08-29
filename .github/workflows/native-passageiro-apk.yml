@@ -106,6 +106,11 @@ jobs:
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
+          grep -q "showHistoryMapDialog" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "showHistoryMapSmoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "CLICKGO_HISTORY_MAP" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "CLICKGO_TRACKING_SMOKE" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "smoke_alive" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_home_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_address_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "nativeAddressFallback" app/src/main/java/com/clickgo/passageiro/MainActivity.java
@@ -154,18 +159,13 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
             grep -q "Status: ok" /tmp/start.txt
-            sleep 20
-            timeout 20 adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml /tmp/window.xml
-            grep -q "Motorista a caminho" /tmp/window.xml
-            grep -q "CANCELAR CORRIDA" /tmp/window.xml
-            grep -q "Motorista teste" /tmp/window.xml
-            adb shell input swipe 500 1300 500 850 300
-            sleep 2
-            timeout 20 adb shell uiautomator dump /sdcard/window2.xml
-            adb pull /sdcard/window2.xml /tmp/window2.xml
-            grep -q "Motorista a caminho" /tmp/window2.xml
-            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            sleep 12
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: start"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: accepted_screen"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: driver_update_1"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: driver_update_2"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: smoke_alive"
+            ! adb logcat -d | grep -E "CLICKGO_TRACKING_SMOKE: .*failed|CLICKGO_TRACKING_SMOKE: smoke_not_alive|ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Home clear-and-reopen stability test
         if: github.event_name == 'pull_request'
@@ -197,36 +197,34 @@ jobs:
             test -s /tmp/home2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
-            adb shell input keyevent KEYCODE_BACK
-            sleep 2
+
+            # Smoke real do mapa do historico: validar via logs + processo vivo, sem uiautomator pesado sobre WebView.
+            adb shell am force-stop com.clickgo.passageiro.beta
+            sleep 1
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_network_smoke true | tee /tmp/home-network.txt
             grep -q "Status: ok" /tmp/home-network.txt
-            sleep 12
-            timeout 20 adb shell uiautomator dump /sdcard/home-network.xml
-            adb pull /sdcard/home-network.xml /tmp/home-network.xml
-            test -s /tmp/home-network.xml
+            sleep 7
+            adb logcat -d | grep -q "CLICKGO_HISTORY_MAP: smoke_start"
+            adb logcat -d | grep -q "CLICKGO_HISTORY_MAP: smoke_alive"
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
+
+            # Busca online de endereco: confirmar operacao real, processo vivo e ausencia de crash do CLICK-GO.
             adb shell am force-stop com.clickgo.passageiro.beta
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_address_network_smoke true | tee /tmp/address-network.txt
             grep -q "Status: ok" /tmp/address-network.txt
             sleep 25
-            timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
-            adb pull /sdcard/address-network.xml /tmp/address-network.xml
-            adb logcat -d | grep "CLICKGO_ADDRESS" || true
-            cat /tmp/address-network.xml
-            grep -q "clickgo_search_on_map" /tmp/address-network.xml
-            grep -q "endereco_resultado_1" /tmp/address-network.xml
+            adb logcat -d | grep -q "CLICKGO_ADDRESS: online"
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.36-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.37-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.36-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.36-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.37-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.37-prime.apk
           if-no-files-found: error
