@@ -34,9 +34,6 @@ type PlaceRule = {
 
 const LOCAL_PLACE_RADIUS_KM = 18
 
-// Table A types supported by Google Places Nearby Search (New).
-// Put more specific expressions first so, for example, "posto de saúde"
-// is not interpreted as a gas station.
 const PLACE_RULES: PlaceRule[] = [
   { terms: ['pronto socorro', 'upa', 'hospital', 'hospitais'], types: ['hospital', 'general_hospital', 'medical_center'] },
   { terms: ['posto de saude', 'centro de saude', 'clinica', 'clinicas'], types: ['medical_clinic', 'medical_center', 'doctor'] },
@@ -75,7 +72,6 @@ const PLACE_RULES: PlaceRule[] = [
   { terms: ['praca', 'pracas'], types: ['plaza', 'park'] },
   { terms: ['terminal', 'terminais'], types: ['transit_station', 'bus_station'] },
   { terms: ['loja', 'lojas'], types: ['store', 'general_store', 'department_store'] },
-  // Kept last because a bare "posto" is normally understood as fuel in the ride app.
   { terms: ['posto', 'postos'], types: ['gas_station'] },
 ]
 
@@ -98,12 +94,7 @@ function first(...values: unknown[]) {
 }
 
 function normalize(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
 function formatCep(value?: string) {
@@ -119,14 +110,12 @@ function fullAddress(parts: AddressParts, fallback = '') {
   const city = str(parts.city)
   const state = str(parts.state)
   const postcode = formatCep(parts.postcode)
-
   const chunks: string[] = []
   if (street) chunks.push(number ? `${street}, ${number}` : street)
   else if (number) chunks.push(number)
   if (neighborhood) chunks.push(neighborhood)
   if (city || state) chunks.push(city && state ? `${city}/${state}` : city || state)
   if (postcode) chunks.push(`CEP ${postcode}`)
-
   return chunks.filter(Boolean).join(' - ') || fallback.trim()
 }
 
@@ -134,18 +123,12 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   const r = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
   const dLng = ((lng2 - lng1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
   return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 function distance(lat: number | null, lng: number | null, rLat: number, rLng: number) {
-  return lat !== null && lng !== null && Number.isFinite(rLat) && Number.isFinite(rLng)
-    ? haversine(lat, lng, rLat, rLng)
-    : undefined
+  return lat !== null && lng !== null && Number.isFinite(rLat) && Number.isFinite(rLng) ? haversine(lat, lng, rLat, rLng) : undefined
 }
 
 function withContext(q: string, context: string) {
@@ -188,74 +171,57 @@ function completenessBonus(row: SearchResult) {
 
 function dedupe(rows: SearchResult[], limit = 8) {
   const seen = new Set<string>()
-  return rows
-    .filter(row => row.label && Number.isFinite(row.lat) && Number.isFinite(row.lng))
-    .filter(row => {
-      const key = `${normalize(row.name || row.label)}|${row.lat.toFixed(4)}|${row.lng.toFixed(4)}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .slice(0, limit)
+  return rows.filter(row => {
+    if (!row.label || !Number.isFinite(row.lat) || !Number.isFinite(row.lng)) return false
+    const key = `${normalize(row.name || row.label)}|${row.lat.toFixed(4)}|${row.lng.toFixed(4)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, limit)
 }
 
 function rankResults(rows: SearchResult[], q: string, context: string, limit = 6) {
   const query = normalize(q)
   const queryTokens = query.split(' ').filter(token => token.length > 1)
   const contextTokens = normalize(context).split(' ').filter(token => token.length > 2)
-
-  return dedupe(
-    rows
-      .map(row => {
-        const label = normalize(row.label)
-        const name = normalize(row.name || '')
-        const matchedTokens = queryTokens.filter(token => label.includes(token) || name.includes(token)).length
-        const contextMatches = contextTokens.filter(token => label.includes(token)).length
-        const km = row.distanceKm
-
-        let score = 0
-        if (query && (label.startsWith(query) || name.startsWith(query))) score -= 70
-        else if (query && (label.includes(query) || name.includes(query))) score -= 48
-        score -= matchedTokens * 9
-        score -= contextMatches * 7
-        score -= completenessBonus(row)
-
-        if (typeof km === 'number') {
-          score += Math.min(km, 300) * 1.15
-          if (km <= 2) score -= 34
-          else if (km <= 5) score -= 26
-          else if (km <= 10) score -= 18
-          else if (km <= 25) score -= 8
-          else if (km >= 80) score += 28
-        }
-
-        if (row.source === 'google') score -= 6
-        else if (row.source === 'mapbox') score -= 4
-        return { ...row, score }
-      })
-      .sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)),
-    limit,
-  ).map(({ score: _score, source: _source, ...row }) => row)
+  return dedupe(rows.map(row => {
+    const label = normalize(row.label)
+    const name = normalize(row.name || '')
+    const matchedTokens = queryTokens.filter(token => label.includes(token) || name.includes(token)).length
+    const contextMatches = contextTokens.filter(token => label.includes(token)).length
+    const km = row.distanceKm
+    let score = 0
+    if (query && (label.startsWith(query) || name.startsWith(query))) score -= 70
+    else if (query && (label.includes(query) || name.includes(query))) score -= 48
+    score -= matchedTokens * 9
+    score -= contextMatches * 7
+    score -= completenessBonus(row)
+    if (typeof km === 'number') {
+      score += Math.min(km, 300) * 1.15
+      if (km <= 2) score -= 34
+      else if (km <= 5) score -= 26
+      else if (km <= 10) score -= 18
+      else if (km <= 25) score -= 8
+      else if (km >= 80) score += 28
+    }
+    if (row.source === 'google') score -= 6
+    else if (row.source === 'mapbox') score -= 4
+    return { ...row, score }
+  }).sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)), limit)
+    .map(({ score: _score, source: _source, ...row }) => row)
 }
 
 function rankLocalPlaces(rows: SearchResult[], q: string, limit = 8) {
   const queryTokens = normalize(q).split(' ').filter(token => token.length > 1)
   const local = rows.filter(row => typeof row.distanceKm === 'number' && row.distanceKm <= LOCAL_PLACE_RADIUS_KM + 0.25)
-
-  return dedupe(
-    local
-      .map(row => {
-        const hay = normalize(`${row.name || ''} ${row.label}`)
-        const matched = queryTokens.filter(token => hay.includes(token)).length
-        const km = row.distanceKm ?? 9999
-        // Distance stays decisive for category searches, while a specifically
-        // named establishment can still outrank a slightly closer generic one.
-        const score = km * 4 - matched * 12 - (row.source === 'google' ? 1 : 0)
-        return { ...row, score }
-      })
-      .sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)),
-    limit,
-  ).map(({ score: _score, source: _source, ...row }) => row)
+  return dedupe(local.map(row => {
+    const hay = normalize(`${row.name || ''} ${row.label}`)
+    const matched = queryTokens.filter(token => hay.includes(token)).length
+    const km = row.distanceKm ?? 9999
+    const score = km * 4 - matched * 12 - (row.source === 'google' ? 1 : 0)
+    return { ...row, score }
+  }).sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)), limit)
+    .map(({ score: _score, source: _source, ...row }) => row)
 }
 
 function googleParts(components: any[] = []): AddressParts {
@@ -266,12 +232,7 @@ function googleParts(components: any[] = []): AddressParts {
   return {
     street: byType('route'),
     number: byType('street_number'),
-    neighborhood: first(
-      byType('sublocality_level_1'),
-      byType('sublocality'),
-      byType('neighborhood'),
-      byType('administrative_area_level_4'),
-    ),
+    neighborhood: first(byType('sublocality_level_1'), byType('sublocality'), byType('neighborhood'), byType('administrative_area_level_4')),
     city: first(byType('locality'), byType('administrative_area_level_2'), byType('postal_town')),
     state: byType('administrative_area_level_1', true),
     postcode: byType('postal_code'),
@@ -286,12 +247,7 @@ function googlePlaceParts(components: any[] = []): AddressParts {
   return {
     street: byType('route'),
     number: byType('street_number'),
-    neighborhood: first(
-      byType('sublocality_level_1'),
-      byType('sublocality'),
-      byType('neighborhood'),
-      byType('administrative_area_level_4'),
-    ),
+    neighborhood: first(byType('sublocality_level_1'), byType('sublocality'), byType('neighborhood'), byType('administrative_area_level_4')),
     city: first(byType('locality'), byType('administrative_area_level_2'), byType('postal_town')),
     state: byType('administrative_area_level_1', true),
     postcode: byType('postal_code'),
@@ -301,7 +257,6 @@ function googlePlaceParts(components: any[] = []): AddressParts {
 async function googleNearbyPlaces(types: string[], lat: number, lng: number): Promise<SearchResult[]> {
   const key = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_SERVER_API_KEY
   if (!key || !types.length) return []
-
   const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
     method: 'POST',
     headers: {
@@ -315,20 +270,13 @@ async function googleNearbyPlaces(types: string[], lat: number, lng: number): Pr
       rankPreference: 'DISTANCE',
       languageCode: 'pt-BR',
       regionCode: 'BR',
-      locationRestriction: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: LOCAL_PLACE_RADIUS_KM * 1000,
-        },
-      },
+      locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: LOCAL_PLACE_RADIUS_KM * 1000 } },
     }),
     cache: 'no-store',
     signal: AbortSignal.timeout(2400),
   })
-
   if (!res.ok) return []
   const json = await res.json() as any
-
   return (json?.places || []).map((p: any) => {
     const rLat = Number(p?.location?.latitude)
     const rLng = Number(p?.location?.longitude)
@@ -352,7 +300,6 @@ async function googleNearbyPlaces(types: string[], lat: number, lng: number): Pr
 function overpassSelectors(types: string[]) {
   const selectors = new Set<string>()
   const has = (...values: string[]) => values.some(value => types.includes(value))
-
   if (has('hospital', 'general_hospital', 'medical_center')) selectors.add('["amenity"~"^(hospital|clinic)$"]')
   if (has('medical_clinic', 'doctor')) selectors.add('["amenity"~"^(clinic|doctors)$"]')
   if (has('supermarket', 'discount_supermarket', 'hypermarket')) selectors.add('["shop"~"^(supermarket|convenience)$"]')
@@ -397,33 +344,22 @@ function overpassSelectors(types: string[]) {
   if (has('park', 'city_park')) selectors.add('["leisure"="park"]')
   if (has('plaza')) selectors.add('["place"="square"]')
   if (has('store', 'general_store', 'department_store')) selectors.add('["shop"~"^(general|department_store)$"]')
-
   return Array.from(selectors)
 }
 
 async function overpassLocalPlaces(types: string[], lat: number, lng: number): Promise<SearchResult[]> {
   const selectors = overpassSelectors(types)
   if (!selectors.length) return []
-
-  const clauses = selectors
-    .map(selector => `nwr(around:${LOCAL_PLACE_RADIUS_KM * 1000},${lat},${lng})${selector};`)
-    .join('')
+  const clauses = selectors.map(selector => `nwr(around:${LOCAL_PLACE_RADIUS_KM * 1000},${lat},${lng})${selector};`).join('')
   const query = `[out:json][timeout:6];(${clauses});out center tags;`
   const body = new URLSearchParams({ data: query }).toString()
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-  ]
-
+  const endpoints = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']
   let elements: any[] = []
   for (const endpoint of endpoints) {
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)' },
         body,
         cache: 'no-store',
         signal: AbortSignal.timeout(3200),
@@ -432,44 +368,39 @@ async function overpassLocalPlaces(types: string[], lat: number, lng: number): P
       const json = await res.json() as any
       elements = Array.isArray(json?.elements) ? json.elements : []
       if (elements.length) break
-    } catch {
-      // Try the next public Overpass instance.
-    }
+    } catch {}
   }
 
-  return elements
-    .map((element: any) => {
-      const tags = element?.tags || {}
-      const rLat = Number(element?.lat ?? element?.center?.lat)
-      const rLng = Number(element?.lon ?? element?.center?.lon)
-      if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) return null
-
-      const parts: AddressParts = {
-        street: first(tags['addr:street'], tags['addr:place']),
-        number: first(tags['addr:housenumber']),
-        neighborhood: first(tags['addr:suburb'], tags['addr:neighbourhood'], tags['addr:district']),
-        city: first(tags['addr:city'], tags['addr:municipality']),
-        state: first(tags['addr:state']),
-        postcode: first(tags['addr:postcode']),
-      }
-      const name = first(tags.name, tags.brand, tags.operator, 'Local')
-      const address = fullAddress(parts, name)
-      const category = first(tags.amenity, tags.shop, tags.tourism, tags.leisure, tags.healthcare, tags.aeroway, 'Local')
-
-      return {
-        ...parts,
-        label: address,
-        name,
-        subtitle: address,
-        category,
-        kind: 'place' as const,
-        lat: rLat,
-        lng: rLng,
-        distanceKm: distance(lat, lng, rLat, rLng),
-        source: 'overpass' as const,
-      }
+  const rows: SearchResult[] = []
+  for (const element of elements) {
+    const tags = element?.tags || {}
+    const rLat = Number(element?.lat ?? element?.center?.lat)
+    const rLng = Number(element?.lon ?? element?.center?.lon)
+    if (!Number.isFinite(rLat) || !Number.isFinite(rLng)) continue
+    const parts: AddressParts = {
+      street: first(tags['addr:street'], tags['addr:place']),
+      number: first(tags['addr:housenumber']),
+      neighborhood: first(tags['addr:suburb'], tags['addr:neighbourhood'], tags['addr:district']),
+      city: first(tags['addr:city'], tags['addr:municipality']),
+      state: first(tags['addr:state']),
+      postcode: first(tags['addr:postcode']),
+    }
+    const name = first(tags.name, tags.brand, tags.operator, 'Local')
+    const address = fullAddress(parts, name)
+    rows.push({
+      ...parts,
+      label: address,
+      name,
+      subtitle: address,
+      category: first(tags.amenity, tags.shop, tags.tourism, tags.leisure, tags.healthcare, tags.aeroway, 'Local'),
+      kind: 'place',
+      lat: rLat,
+      lng: rLng,
+      distanceKm: distance(lat, lng, rLat, rLng),
+      source: 'overpass',
     })
-    .filter((row: SearchResult | null): row is SearchResult => Boolean(row))
+  }
+  return rows
 }
 
 async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promise<SearchResult[]> {
@@ -482,18 +413,13 @@ async function nominatimLocalPlaces(q: string, lat: number, lng: number): Promis
   url.searchParams.set('addressdetails', '1')
   url.searchParams.set('bounded', '1')
   url.searchParams.set('viewbox', `${bounds.low.longitude},${bounds.high.latitude},${bounds.high.longitude},${bounds.low.latitude}`)
-
   const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
-      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5',
-    },
+    headers: { 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5' },
     cache: 'no-store',
     signal: AbortSignal.timeout(1800),
   })
   if (!res.ok) return []
   const json = await res.json() as any[]
-
   return (Array.isArray(json) ? json : []).map((r: any) => {
     const a = r?.address || {}
     const parts: AddressParts = {
@@ -529,17 +455,8 @@ async function localPlaceSearch(q: string, rule: PlaceRule, lat: number, lng: nu
     nominatimLocalPlaces(q, lat, lng).catch(() => []),
   ])
   const results = rankLocalPlaces([...google, ...overpass, ...osmSearch], q)
-
-  const activeProviders = [
-    google.length ? 'google' : '',
-    overpass.length ? 'overpass' : '',
-    osmSearch.length ? 'nominatim' : '',
-  ].filter(Boolean)
-
-  return {
-    results,
-    provider: activeProviders.length > 1 ? 'mixed' : activeProviders[0] || 'none',
-  }
+  const activeProviders = [google.length ? 'google' : '', overpass.length ? 'overpass' : '', osmSearch.length ? 'nominatim' : ''].filter(Boolean)
+  return { results, provider: activeProviders.length > 1 ? 'mixed' : activeProviders[0] || 'none' }
 }
 
 async function mapboxSearch(q: string, lat: number | null, lng: number | null): Promise<SearchResult[]> {
@@ -553,11 +470,9 @@ async function mapboxSearch(q: string, lat: number | null, lng: number | null): 
   url.searchParams.set('language', 'pt-BR')
   url.searchParams.set('access_token', token)
   if (lat !== null && lng !== null) url.searchParams.set('proximity', `${lng},${lat}`)
-
   const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(1800) })
   if (!res.ok) return []
   const json = await res.json() as any
-
   return (json?.features || []).map((f: any) => {
     const c = f?.geometry?.coordinates || []
     const props = f?.properties || {}
@@ -574,18 +489,7 @@ async function mapboxSearch(q: string, lat: number | null, lng: number | null): 
     const rLat = Number(c[1])
     const rLng = Number(c[0])
     const label = fullAddress(parts, first(props.full_address, props.place_formatted, props.name))
-    return {
-      ...parts,
-      label,
-      name: first(props.name, parts.street, label) || undefined,
-      subtitle: label,
-      category: 'Endereço',
-      kind: 'address' as const,
-      lat: rLat,
-      lng: rLng,
-      distanceKm: distance(lat, lng, rLat, rLng),
-      source: 'mapbox' as const,
-    }
+    return { ...parts, label, name: first(props.name, parts.street, label) || undefined, subtitle: label, category: 'Endereço', kind: 'address' as const, lat: rLat, lng: rLng, distanceKm: distance(lat, lng, rLat, rLng), source: 'mapbox' as const }
   })
 }
 
@@ -602,18 +506,9 @@ async function nominatimSearch(q: string, lat: number | null, lng: number | null
     url.searchParams.set('viewbox', `${lng - lngDelta},${lat + latDelta},${lng + lngDelta},${lat - latDelta}`)
     url.searchParams.set('bounded', '0')
   }
-
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
-      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5',
-    },
-    cache: 'no-store',
-    signal: AbortSignal.timeout(1800),
-  })
+  const res = await fetch(url, { headers: { 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.5' }, cache: 'no-store', signal: AbortSignal.timeout(1800) })
   if (!res.ok) return []
   const json = await res.json() as any[]
-
   return (Array.isArray(json) ? json : []).map((r: any) => {
     const a = r?.address || {}
     const parts: AddressParts = {
@@ -627,18 +522,7 @@ async function nominatimSearch(q: string, lat: number | null, lng: number | null
     const rLat = Number(r.lat)
     const rLng = Number(r.lon)
     const label = fullAddress(parts, str(r.display_name))
-    return {
-      ...parts,
-      label,
-      name: first(r.name, parts.street, label) || undefined,
-      subtitle: label,
-      category: 'Endereço',
-      kind: 'address' as const,
-      lat: rLat,
-      lng: rLng,
-      distanceKm: distance(lat, lng, rLat, rLng),
-      source: 'nominatim' as const,
-    }
+    return { ...parts, label, name: first(r.name, parts.street, label) || undefined, subtitle: label, category: 'Endereço', kind: 'address' as const, lat: rLat, lng: rLng, distanceKm: distance(lat, lng, rLat, rLng), source: 'nominatim' as const }
   })
 }
 
@@ -651,31 +535,16 @@ async function googleGeocode(q: string, lat: number | null, lng: number | null):
   url.searchParams.set('language', 'pt-BR')
   url.searchParams.set('components', 'country:BR')
   url.searchParams.set('key', key)
-  if (lat !== null && lng !== null) {
-    url.searchParams.set('bounds', `${lat - .12},${lng - .12}|${lat + .12},${lng + .12}`)
-  }
-
+  if (lat !== null && lng !== null) url.searchParams.set('bounds', `${lat - .12},${lng - .12}|${lat + .12},${lng + .12}`)
   const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(1800) })
   if (!res.ok) return []
   const json = await res.json() as any
-
   return (json?.results || []).slice(0, 8).map((r: any) => {
     const rLat = Number(r.geometry?.location?.lat)
     const rLng = Number(r.geometry?.location?.lng)
     const parts = googleParts(r.address_components || [])
     const label = fullAddress(parts, str(r.formatted_address))
-    return {
-      ...parts,
-      label,
-      name: first(parts.street, r.formatted_address) || undefined,
-      subtitle: label,
-      category: 'Endereço',
-      kind: 'address' as const,
-      lat: rLat,
-      lng: rLng,
-      distanceKm: distance(lat, lng, rLat, rLng),
-      source: 'google' as const,
-    }
+    return { ...parts, label, name: first(parts.street, r.formatted_address) || undefined, subtitle: label, category: 'Endereço', kind: 'address' as const, lat: rLat, lng: rLng, distanceKm: distance(lat, lng, rLat, rLng), source: 'google' as const }
   })
 }
 
@@ -687,10 +556,7 @@ async function rankedForwardSearch(q: string, context: string, lat: number | nul
     nominatimSearch(contextual, lat, lng).catch(() => []),
   ])
   const merged = rankResults([...google, ...mapbox, ...osm], q, context)
-  return {
-    results: merged,
-    provider: google.length && (mapbox.length || osm.length) ? 'mixed' : google.length ? 'google' : mapbox.length ? 'mapbox' : osm.length ? 'nominatim' : 'none',
-  }
+  return { results: merged, provider: google.length && (mapbox.length || osm.length) ? 'mixed' : google.length ? 'google' : mapbox.length ? 'mapbox' : osm.length ? 'nominatim' : 'none' }
 }
 
 async function googleReverse(lat: number, lng: number): Promise<SearchResult | null> {
@@ -709,9 +575,7 @@ async function googleReverse(lat: number, lng: number): Promise<SearchResult | n
     if (!r) return null
     const parts = googleParts(r.address_components || [])
     return { ...parts, label: fullAddress(parts, str(r.formatted_address)), kind: 'address', category: 'Localização atual', lat, lng }
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 async function nominatimReverse(lat: number, lng: number): Promise<SearchResult | null> {
@@ -722,14 +586,7 @@ async function nominatimReverse(lat: number, lng: number): Promise<SearchResult 
     url.searchParams.set('lon', String(lng))
     url.searchParams.set('zoom', '18')
     url.searchParams.set('addressdetails', '1')
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)',
-        'Accept-Language': 'pt-BR,pt;q=0.9',
-      },
-      cache: 'no-store',
-      signal: AbortSignal.timeout(1800),
-    })
+    const res = await fetch(url, { headers: { 'User-Agent': 'CLICK-GO/1.0 (+https://click-go-ten.vercel.app)', 'Accept-Language': 'pt-BR,pt;q=0.9' }, cache: 'no-store', signal: AbortSignal.timeout(1800) })
     if (!res.ok) return null
     const json = await res.json() as any
     if (!json) return null
@@ -743,9 +600,7 @@ async function nominatimReverse(lat: number, lng: number): Promise<SearchResult 
       postcode: first(a.postcode),
     }
     return { ...parts, label: fullAddress(parts, str(json.display_name)), kind: 'address', category: 'Localização atual', lat, lng }
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 async function mapboxReverse(lat: number, lng: number): Promise<SearchResult | null> {
@@ -773,17 +628,8 @@ async function mapboxReverse(lat: number, lng: number): Promise<SearchResult | n
       state: first(ctx.region?.region_code, ctx.region?.name),
       postcode: first(ctx.postcode?.name),
     }
-    return {
-      ...parts,
-      label: fullAddress(parts, first(props.full_address, props.place_formatted, props.name, 'Minha localização')),
-      kind: 'address',
-      category: 'Localização atual',
-      lat,
-      lng,
-    }
-  } catch {
-    return null
-  }
+    return { ...parts, label: fullAddress(parts, first(props.full_address, props.place_formatted, props.name, 'Minha localização')), kind: 'address', category: 'Localização atual', lat, lng }
+  } catch { return null }
 }
 
 async function reverseLookup(lat: number, lng: number): Promise<SearchResult | null> {
@@ -795,37 +641,28 @@ async function reverseLookup(lat: number, lng: number): Promise<SearchResult | n
 }
 
 function response(payload: Record<string, unknown>, status = 200) {
-  return NextResponse.json(payload, {
-    status,
-    headers: status === 200
-      ? { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' }
-      : undefined,
-  })
+  return NextResponse.json(payload, { status, headers: status === 200 ? { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } : undefined })
 }
 
 export async function GET(request: NextRequest) {
   const reverse = request.nextUrl.searchParams.get('reverse') === '1'
   const lat = parseCoord(request.nextUrl.searchParams.get('lat'), -90, 90)
   const lng = parseCoord(request.nextUrl.searchParams.get('lng'), -180, 180)
-
   if (reverse) {
     if (lat === null || lng === null) return response({ error: 'Localização inválida.' }, 400)
     const result = await reverseLookup(lat, lng)
     return response({ results: result ? [result] : [], provider: 'auto', completeAddress: true })
   }
-
   const q = (request.nextUrl.searchParams.get('q') || '').trim()
   const context = (request.nextUrl.searchParams.get('context') || '').trim().slice(0, 100)
   if (q.length < 3) return response({ error: 'Digite pelo menos 3 caracteres.' }, 400)
   if (q.length > 180) return response({ error: 'Endereço muito longo.' }, 400)
-
   try {
     const placeRule = placeRuleForQuery(q)
     const localPlaceMode = lat !== null && lng !== null && Boolean(placeRule)
     const found = localPlaceMode
       ? await localPlaceSearch(q, placeRule as PlaceRule, lat as number, lng as number)
       : await rankedForwardSearch(q, context, lat, lng)
-
     return response({
       results: found.results,
       regionalized: lat !== null && lng !== null,
