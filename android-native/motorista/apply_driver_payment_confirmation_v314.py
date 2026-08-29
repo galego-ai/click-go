@@ -35,7 +35,6 @@ if '        resumePendingPaymentConfirmation();\n' not in text:
     if home_anchor not in text: raise SystemExit('loadHomeTaximeter da home não encontrado')
     text=text.replace(home_anchor,home_anchor+'        resumePendingPaymentConfirmation();\n',1)
 
-rating_anchor='''    private void showPassengerRating(String rideId, double fare) {\n'''
 methods=r'''    private void resumePendingPaymentConfirmation() {
         if (paymentConfirmationShowing || token == null || token.isBlank() || userId == null || userId.isBlank()) return;
         io.execute(() -> {
@@ -101,8 +100,11 @@ methods=r'''    private void resumePendingPaymentConfirmation() {
 
 '''
 if 'private void showRidePaymentConfirmation(' not in text:
-    if rating_anchor not in text: raise SystemExit('showPassengerRating não encontrado')
-    text=text.replace(rating_anchor,methods+rating_anchor,1)
+    # O patch v2.8 compacta a assinatura para showPassengerRating(String rideId,double fare){.
+    # Localizamos por regex para não depender de espaços introduzidos por patches anteriores.
+    rating_match=re.search(r'    private void showPassengerRating\(String rideId,\s*double fare\)\s*\{',text)
+    if not rating_match: raise SystemExit('showPassengerRating final não encontrado')
+    text=text[:rating_match.start()]+methods+text[rating_match.start():]
 
 # Deixa explícito na home que o taxímetro abre uma viagem própria. O backend v3.13 continua sendo a autoridade:
 # somente franquias liberadas pela Matriz conseguem iniciar a sessão e o motorista fica fora das chamadas normais.
