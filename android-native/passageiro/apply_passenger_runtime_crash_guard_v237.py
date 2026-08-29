@@ -89,6 +89,7 @@ new_method = r'''    private void showHistoryMapDialog(String html){
             web.setContentDescription("clickgo_history_real_map");
             web.setWebViewClient(new android.webkit.WebViewClient(){
                 @Override public boolean onRenderProcessGone(android.webkit.WebView view,android.webkit.RenderProcessGoneDetail detail){
+                    android.util.Log.w("CLICKGO_HISTORY_MAP","renderer_gone");
                     try{holder.removeView(view);}catch(Throwable ignored){}
                     try{view.removeAllViews();}catch(Throwable ignored){}
                     try{view.destroy();}catch(Throwable ignored){}
@@ -102,7 +103,10 @@ new_method = r'''    private void showHistoryMapDialog(String html){
             dialog.show();
             if(dialog.getWindow()!=null)dialog.getWindow().setLayout(-1,(int)(getResources().getDisplayMetrics().heightPixels*0.82));
             web.loadDataWithBaseURL("https://click-go-ten.vercel.app/",html,"text/html","UTF-8",null);
-        }catch(Throwable fatal){toast("Nao foi possivel abrir o mapa desta corrida agora.");}
+        }catch(Throwable fatal){
+            android.util.Log.e("CLICKGO_HISTORY_MAP","dialog_failure",fatal);
+            toast("Nao foi possivel abrir o mapa desta corrida agora.");
+        }
     }
 
     private void showPassengerHistoryMap(JSONObject ride){
@@ -116,13 +120,15 @@ new_method = r'''    private void showHistoryMapDialog(String html){
 
     private void showHistoryMapSmoke(){
         try{
+            android.util.Log.i("CLICKGO_HISTORY_MAP","smoke_start");
             JSONObject ride=new JSONObject().put("origin_lat",-14.52472).put("origin_lng",-49.14083).put("destination_lat",-14.53110).put("destination_lng",-49.13610).put("_origin_address","Embarque de teste").put("_destination_address","Destino de teste");
             JSONArray pts=new JSONArray();
             pts.put(new JSONObject().put("lat",-14.52472).put("lng",-49.14083));
             pts.put(new JSONObject().put("lat",-14.52730).put("lng",-49.13900));
             pts.put(new JSONObject().put("lat",-14.53110).put("lng",-49.13610));
             showHistoryMapDialog(historyMapHtml(ride,pts));
-        }catch(Throwable ignored){}
+            ui.postDelayed(()->android.util.Log.i("CLICKGO_HISTORY_MAP","smoke_alive"),3000);
+        }catch(Throwable fatal){android.util.Log.e("CLICKGO_HISTORY_MAP","smoke_failure",fatal);}
     }
 '''
 if old_method in text:
@@ -138,7 +144,7 @@ if network_smoke in text:
 elif 'ui.postDelayed(this::showHistoryMapSmoke,1500)' not in text:
     raise SystemExit('v2.37: smoke de rede nao encontrado')
 
-for required in ['safeShowHome','showHistoryMapDialog','onRenderProcessGone','showHistoryMapSmoke','clickgo_history_real_map']:
+for required in ['safeShowHome','showHistoryMapDialog','onRenderProcessGone','showHistoryMapSmoke','CLICKGO_HISTORY_MAP','smoke_alive','clickgo_history_real_map']:
     if required not in text:
         raise SystemExit('v2.37 incompleto: '+required)
 
