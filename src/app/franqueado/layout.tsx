@@ -10,6 +10,7 @@ type NavItem={href:string;label:string;permission?:string|string[]}
 type CollectionState={overdue_days:number;open_overdue_amount:number;allow_new_drivers:boolean;allow_new_rides:boolean;operation_suspended:boolean;license_status:string}
 const core:NavItem[]=[
  {href:'/franqueado',label:'📊 Dashboard'},
+ {href:'/franqueado/chamadas',label:'📲 Chamar corrida',permission:'operation'},
  {href:'/franqueado/cadastros',label:'👥 Motoristas e Passageiros',permission:['drivers','users']},
  {href:'/franqueado/operacao',label:'🛣️ Corridas',permission:'operation'},
  {href:'/franqueado/mapa',label:'🗺️ Motoristas Online / Mapa',permission:'operation'},
