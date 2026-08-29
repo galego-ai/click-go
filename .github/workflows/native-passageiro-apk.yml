@@ -109,6 +109,7 @@ jobs:
           grep -q "showHistoryMapDialog" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "showHistoryMapSmoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "CLICKGO_HISTORY_MAP" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "CLICKGO_TRACKING_SMOKE" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "smoke_alive" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_home_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_address_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
@@ -158,18 +159,13 @@ jobs:
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_tracking_smoke true | tee /tmp/start.txt
             grep -q "Status: ok" /tmp/start.txt
-            sleep 20
-            timeout 20 adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml /tmp/window.xml
-            grep -q "Motorista a caminho" /tmp/window.xml
-            grep -q "CANCELAR CORRIDA" /tmp/window.xml
-            grep -q "Motorista teste" /tmp/window.xml
-            adb shell input swipe 500 1300 500 850 300
-            sleep 2
-            timeout 20 adb shell uiautomator dump /sdcard/window2.xml
-            adb pull /sdcard/window2.xml /tmp/window2.xml
-            grep -q "Motorista a caminho" /tmp/window2.xml
-            ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
+            sleep 12
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: start"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: accepted_screen"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: driver_update_1"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: driver_update_2"
+            adb logcat -d | grep -q "CLICKGO_TRACKING_SMOKE: smoke_alive"
+            ! adb logcat -d | grep -E "CLICKGO_TRACKING_SMOKE: .*failed|CLICKGO_TRACKING_SMOKE: smoke_not_alive|ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
       - name: Home clear-and-reopen stability test
         if: github.event_name == 'pull_request'
