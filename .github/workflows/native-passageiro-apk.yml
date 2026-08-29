@@ -106,6 +106,8 @@ jobs:
           grep -q "get_active_app_banners" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerHomeMap.java
           grep -q "onRenderProcessGone" app/src/main/java/com/clickgo/passageiro/PassengerLiveMap.java
+          grep -q "showHistoryMapDialog" app/src/main/java/com/clickgo/passageiro/MainActivity.java
+          grep -q "showHistoryMapSmoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_home_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "clickgo_address_network_smoke" app/src/main/java/com/clickgo/passageiro/MainActivity.java
           grep -q "nativeAddressFallback" app/src/main/java/com/clickgo/passageiro/MainActivity.java
@@ -197,17 +199,25 @@ jobs:
             test -s /tmp/home2.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
-            adb shell input keyevent KEYCODE_BACK
-            sleep 2
+
+            # Abertura fria para garantir que o extra de smoke v2.37 seja processado no onCreate.
+            adb shell am force-stop com.clickgo.passageiro.beta
+            sleep 1
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_home_network_smoke true | tee /tmp/home-network.txt
             grep -q "Status: ok" /tmp/home-network.txt
-            sleep 12
+            sleep 8
             timeout 20 adb shell uiautomator dump /sdcard/home-network.xml
             adb pull /sdcard/home-network.xml /tmp/home-network.xml
             test -s /tmp/home-network.xml
+            grep -q "Mapa da corrida" /tmp/home-network.xml
+            grep -q "clickgo_history_real_map" /tmp/home-network.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
             adb shell pidof com.clickgo.passageiro.beta >/dev/null
+            adb shell input keyevent KEYCODE_BACK || true
+            sleep 1
+
+            # Busca de endereco: manter a verificacao do app e recuperar somente dialogos de ANR do launcher do emulador.
             adb shell am force-stop com.clickgo.passageiro.beta
             adb logcat -c
             adb shell am start -W -n com.clickgo.passageiro.beta/com.clickgo.passageiro.MainActivity --ez clickgo_address_network_smoke true | tee /tmp/address-network.txt
@@ -215,8 +225,13 @@ jobs:
             sleep 25
             timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
             adb pull /sdcard/address-network.xml /tmp/address-network.xml
-            adb logcat -d | grep "CLICKGO_ADDRESS" || true
-            cat /tmp/address-network.xml
+            if grep -q "Pixel Launcher isn't responding" /tmp/address-network.xml; then
+              adb shell input keyevent KEYCODE_BACK || true
+              sleep 2
+              timeout 20 adb shell uiautomator dump /sdcard/address-network.xml
+              adb pull /sdcard/address-network.xml /tmp/address-network.xml
+            fi
+            adb logcat -d | grep -q "CLICKGO_ADDRESS: online"
             grep -q "clickgo_search_on_map" /tmp/address-network.xml
             grep -q "endereco_resultado_1" /tmp/address-network.xml
             ! adb logcat -d | grep -E "ANR in com.clickgo.passageiro.beta|FATAL EXCEPTION: main|Input dispatching timed out"
@@ -224,9 +239,9 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p apk-output
-          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.36-prime.apk
+          cp android-native/passageiro/app/build/outputs/apk/debug/app-debug.apk apk-output/CLICK-GO-Passageiro-native-v2.37-prime.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: CLICK-GO-Passageiro-native-v2.36-prime
-          path: apk-output/CLICK-GO-Passageiro-native-v2.36-prime.apk
+          name: CLICK-GO-Passageiro-native-v2.37-prime
+          path: apk-output/CLICK-GO-Passageiro-native-v2.37-prime.apk
           if-no-files-found: error
