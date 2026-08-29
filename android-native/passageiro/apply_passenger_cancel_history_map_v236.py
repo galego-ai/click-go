@@ -107,3 +107,8 @@ if m:build=build[:m.start(1)]+str(max(int(m.group(1))+1,236))+build[m.end(1):]
 build=re.sub(r"versionName\s+'[^']+'","versionName '2.36-prime'",build,count=1)
 main.write_text(text,encoding='utf-8');build_path.write_text(build,encoding='utf-8')
 print('Passageiro v2.36 PRIME: cancelar chamada volta para home e histórico usa mapa real da corrida.')
+
+# Encadeia o hardening runtime v2.37 sem duplicar a longa lista do workflow.
+v237=Path('apply_passenger_runtime_crash_guard_v237.py')
+if not v237.exists(): raise SystemExit('apply_passenger_runtime_crash_guard_v237.py não encontrado')
+exec(compile(v237.read_text(encoding='utf-8'),str(v237),'exec'),{})
