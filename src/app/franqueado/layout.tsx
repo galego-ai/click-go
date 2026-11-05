@@ -13,6 +13,7 @@ const core:NavItem[]=[
  {href:'/franqueado',label:'📊 Dashboard'},
  {href:'/franqueado/chamadas',label:'📲 Chamar corrida',permission:'operation'},
  {href:'/franqueado/cadastros',label:'👥 Motoristas e Passageiros',permission:['drivers','users']},
+ {href:'/franqueado/motoristas',label:'🧑‍✈️ Gerenciar Motoristas',permission:'drivers'},
  {href:'/franqueado/operacao',label:'🛣️ Corridas',permission:'operation'},
  {href:'/franqueado/mapa',label:'🗺️ Motoristas Online / Mapa',permission:'operation'},
  {href:'/franqueado/categorias',label:'💰 Tarifas Locais',permission:'pricing'},
